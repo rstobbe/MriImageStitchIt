@@ -62,8 +62,11 @@ end
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(RECON,DataObj)     
-
     err.flag = 0;
+    for n = 1:gpuDeviceCount
+        gpuDevice(n);
+    end  
+    
     StitchIt = StitchItReturnRxProfs(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
