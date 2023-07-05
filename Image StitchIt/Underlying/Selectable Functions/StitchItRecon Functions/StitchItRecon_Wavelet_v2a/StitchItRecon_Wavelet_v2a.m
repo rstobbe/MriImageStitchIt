@@ -75,13 +75,46 @@ end
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(RECON,DataObj)     
+    %% Test  
     err.flag = 0;
+    IMG = [];
+    if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
+        err.flag = 1;
+        err.msg = 'Data and Recon do not match';
+        return
+    end
+    if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
+        answer = questdlg('Data and Recon have different names - continue?');
+        switch answer
+            case 'No'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+            case 'Cancel'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+        end
+    end
+    if RECON.ReconNumber ~= length(RECON.AcqInfo)
+        err.flag = 1;
+        err.msg = 'ReconNumber beyond length Recon_File';
+        return
+    end
+
+    %% Reset GPUs
+    DisplayStatusCompass('Reset GPUs',2);
     for n = 1:gpuDeviceCount
         gpuDevice(n);
     end
     
     %% RxProfs
-    StitchIt = StitchItReturnRxProfs(); 
+    DisplayStatusCompass('RxProfs',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             % Do scaling inside here...
+    
+    DisplayStatusCompass('RxProfs: Initialize',3);
+    StitchIt = StitchItReturnRxProfs();
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
         StitchIt.SetFov2ReturnGridMatrix;
@@ -90,12 +123,16 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfoRxp,RxChannels); 
-    Data = DataObj.DataFull{1};                                     % Receive profile must be associated with the first data set
-    Data = DataObj.ScaleSimulationData(StitchIt,Data);   
-    RxProfs = StitchIt.CreateImage(Data);
-    clear SitchIt
     
-    %% Image0  
+    DisplayStatusCompass('RxProfs: Generate',3);
+    RxProfs = StitchIt.CreateImage(Data);
+    
+    %% Image
+    DisplayStatusCompass('Initial Image',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
+    
+    DisplayStatusCompass('Initial Image: Initialize',3);
     StitchIt = StitchItSuperRegridInputRxProf(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
@@ -104,17 +141,15 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         StitchIt.SetFov2ReturnBaseMatrix;
     end
     RxChannels = DataObj.RxChannels;
-    if RECON.ReconNumber ~= length(RECON.AcqInfo)
-        err.flag = 1;
-        err.msg = 'ReconNumber beyond length Recon_File';
-    end
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
-    Data = DataObj.DataFull{RECON.ReconNumber};
-    Data = DataObj.ScaleSimulationData(StitchIt,Data);   
+
+    DisplayStatusCompass('Initial Image: Generate',3);
     Image0 = StitchIt.CreateImage(Data,RxProfs);
     clear SitchIt
     
     %% Wavelet 
+    DisplayStatusCompass('CompSense Image',2);    
+    DisplayStatusCompass('CompSense Image: Initialize',3);
     StitchIt = StitchItWaveletInputRxProfIm0(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     StitchIt.SetLevelsPerDim(RECON.LevelsPerDim);
@@ -126,13 +161,9 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         StitchIt.SetFov2ReturnBaseMatrix;
     end
     RxChannels = DataObj.RxChannels;
-    if RECON.ReconNumber ~= length(RECON.AcqInfo)
-        err.flag = 1;
-        err.msg = 'ReconNumber beyond length Recon_File';
-    end
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
-    Data = DataObj.DataFull{RECON.ReconNumber};
-    Data = DataObj.ScaleSimulationData(StitchIt,Data);   
+
+    DisplayStatusCompass('CompSense Image: Generate',3);
     Image = StitchIt.CreateImage(Data,RxProfs,Image0);
     
     %% Return

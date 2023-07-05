@@ -3,15 +3,13 @@
 %   - 
 %==================================================================
 
-classdef StitchItRecon_SuperRegrid_v2a < handle
+classdef StitchItRecon_ReturnRxIms_v2a < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_SuperRegrid_v2a'
+    Method = 'StitchItRecon_ReturnRxIms_v2a'
     BaseMatrix
     Fov2Return
-    AcqInfo
     AcqInfoRxp
-    ReconNumber
 end
 
 methods 
@@ -19,7 +17,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_SuperRegrid_v2a()              
+function RECON = StitchItRecon_ReturnRxIms_v2a()              
 end
 
 %==================================================================
@@ -29,7 +27,6 @@ function InitViaCompass(RECON,RECONipt)
 
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
     RECON.Fov2Return = RECONipt.('Fov2Return');
-    RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -51,8 +48,7 @@ function InitViaCompass(RECON,RECONipt)
             return
         end
     end
-    RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;
-    RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;       
+    RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;          
 end
 
 %==================================================================
@@ -87,25 +83,20 @@ function [IMG,err] = CreateImage(RECON,DataObj)
                 return
         end
     end
-    if RECON.ReconNumber ~= length(RECON.AcqInfo)
-        err.flag = 1;
-        err.msg = 'ReconNumber beyond length Recon_File';
-        return
-    end
 
     %% Reset GPUs
     DisplayStatusCompass('Reset GPUs',2);
     for n = 1:gpuDeviceCount
         gpuDevice(n);
-    end
-
-    %% RxProfs
-    DisplayStatusCompass('RxProfs',2);
+    end  
+    
+    %% RxIms
+    DisplayStatusCompass('RxIms',2);
     DisplayStatusCompass('Load Data',3);
     Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             % Do scaling inside here...
-    
-    DisplayStatusCompass('RxProfs: Initialize',3);
-    StitchIt = StitchItReturnRxProfs();
+
+    DisplayStatusCompass('RxIms: Initialize',3);
+    StitchIt = StitchItReturnRxIms(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
         StitchIt.SetFov2ReturnGridMatrix;
@@ -114,28 +105,9 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfoRxp,RxChannels); 
-    
-    DisplayStatusCompass('RxProfs: Generate',3);
-    RxProfs = StitchIt.CreateImage(Data);
-    
-    %% Image
-    DisplayStatusCompass('Super Recon',2);
-    DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
-    
-    DisplayStatusCompass('Super Recon: Initialize',3);
-    StitchIt = StitchItSuperRegridInputRxProf(); 
-    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-    if strcmp(RECON.Fov2Return,'GridMatrix')
-        StitchIt.SetFov2ReturnGridMatrix;
-    else
-        StitchIt.SetFov2ReturnBaseMatrix;
-    end
-    RxChannels = DataObj.RxChannels;
-    StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
 
-    DisplayStatusCompass('Super Recon: Generate',3);
-    Image = StitchIt.CreateImage(Data,RxProfs);
+    DisplayStatusCompass('RxIms: Generate',3);
+    Image = StitchIt.CreateImage(Data);
     
     %% Return
     Panel(1,:) = {'','','Output'};
@@ -143,8 +115,8 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     Panel(3,:) = {'Fov2Return',RECON.Fov2Return,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'SuperRegrid';
-    IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
+    NameSuffix = 'RetRxIms';
+    IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfoRxp,StitchIt,PanelOutput,NameSuffix);
     clear StitchIt
     
 end

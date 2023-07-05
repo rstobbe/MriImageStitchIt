@@ -19,21 +19,10 @@ STCHRECON = INPUT.STCHRECON;
 clear INPUT;
 
 %----------------------------------------------
-% Stitch Data
-%----------------------------------------------
-func = str2func([IMG.stitchitdatafunc,'_Func']);  
-INPUT = [];
-[STCHDATA,err] = func(STCHDATA,INPUT);
-if err.flag
-    return
-end
-clear INPUT;
-
-%----------------------------------------------
 % Stitch Run
 %----------------------------------------------
 Status2('busy','StitchIt Run',2);
-IMG = STCHRECON.CreateImage(STCHDATA.DataObj);
+[IMG,err] = STCHRECON.CreateImage(STCHDATA.DATA.DataObj);
 
 Status2('done','',1);
 Status2('done','',2);

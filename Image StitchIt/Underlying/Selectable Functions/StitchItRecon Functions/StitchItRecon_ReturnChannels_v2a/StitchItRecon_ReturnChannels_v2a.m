@@ -64,11 +64,40 @@ end
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(RECON,DataObj)     
+    %% Test  
     err.flag = 0;
+    IMG = [];
+    if RECON.AcqInfo{1}.NumTraj ~= DataObj.AcqsPerImage
+        err.flag = 1;
+        err.msg = 'Data and Recon do not match';
+        return
+    end
+    if ~strcmp(RECON.AcqInfo{1}.name,DataObj.DataInfo.TrajName)
+        answer = questdlg('Data and Recon have different names - continue?');
+        switch answer
+            case 'No'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+            case 'Cancel'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+        end
+    end
+
+    %% Reset GPUs
+    DisplayStatusCompass('Reset GPUs',2);
     for n = 1:gpuDeviceCount
         gpuDevice(n);
     end  
     
+    %% Return Channels
+    DisplayStatusCompass('Return Channels',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
+
+    DisplayStatusCompass('RxChannels: Initialize',3);
     StitchIt = StitchItReturnChannels(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
@@ -77,15 +106,12 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         StitchIt.SetFov2ReturnBaseMatrix;
     end
     RxChannels = DataObj.RxChannels;
-    if RECON.ReconNumber ~= length(RECON.AcqInfo)
-        err.flag = 1;
-        err.msg = 'ReconNumber beyond length Recon_File';
-    end
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
-    Data = DataObj.DataFull{RECON.ReconNumber};
-    Data = DataObj.ScaleSimulationData(StitchIt,Data);   
+
+    DisplayStatusCompass('RxIms: Generate',3);
     Image = StitchIt.CreateImage(Data);
     
+    %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
     Panel(3,:) = {'Fov2Return',RECON.Fov2Return,'Output'};

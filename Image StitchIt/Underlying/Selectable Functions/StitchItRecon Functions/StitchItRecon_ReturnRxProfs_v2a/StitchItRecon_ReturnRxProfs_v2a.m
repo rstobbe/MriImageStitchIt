@@ -62,12 +62,41 @@ end
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(RECON,DataObj)     
+    %% Test  
     err.flag = 0;
+    IMG = [];
+    if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
+        err.flag = 1;
+        err.msg = 'Data and Recon do not match';
+        return
+    end
+    if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
+        answer = questdlg('Data and Recon have different names - continue?');
+        switch answer
+            case 'No'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+            case 'Cancel'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+        end
+    end
+
+    %% Reset GPUs
+    DisplayStatusCompass('Reset GPUs',2);
     for n = 1:gpuDeviceCount
         gpuDevice(n);
-    end  
+    end 
     
-    StitchIt = StitchItReturnRxProfs(); 
+    %% RxProfs
+    DisplayStatusCompass('RxProfs',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             % Do scaling inside here...
+    
+    DisplayStatusCompass('RxProfs: Initialize',3);
+    StitchIt = StitchItReturnRxProfs();
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     if strcmp(RECON.Fov2Return,'GridMatrix')
         StitchIt.SetFov2ReturnGridMatrix;
@@ -76,17 +105,23 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfoRxp,RxChannels); 
-    Data = DataObj.DataFull{1};                                     % Receive profile must be associated with the first data set
-    Data = DataObj.ScaleSimulationData(StitchIt,Data);   
-    Image = StitchIt.CreateImage(Data);
     
+    DisplayStatusCompass('RxProfs: Generate',3);
+    RxProfs = StitchIt.CreateImage(Data);
+    
+    %% SumOfSquares Profile
+    % SumRxProfs = RxProfs .* conj(RxProfs);
+    SumRxProfs = sum(abs(RxProfs).^2,4);
+    RxProfs = cat(4,RxProfs,SumRxProfs);
+    
+    %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
     Panel(3,:) = {'Fov2Return',RECON.Fov2Return,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
     NameSuffix = 'RxProfs';
-    IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfoRxp,StitchIt,PanelOutput,NameSuffix);
+    IMG = AddCompassInfo(RxProfs,DataObj,RECON.AcqInfoRxp,StitchIt,PanelOutput,NameSuffix);
     clear StitchIt
     
 end
