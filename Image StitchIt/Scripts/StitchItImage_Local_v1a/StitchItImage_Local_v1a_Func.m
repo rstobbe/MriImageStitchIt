@@ -19,6 +19,17 @@ STCHRECON = INPUT.STCHRECON;
 clear INPUT;
 
 %----------------------------------------------
+% Stitch Data
+%----------------------------------------------
+func = str2func([IMG.stitchitdatafunc,'_Func']);  
+INPUT = [];
+[STCHDATA,err] = func(STCHDATA,INPUT);
+if err.flag
+    return
+end
+clear INPUT;
+
+%----------------------------------------------
 % Stitch Run
 %----------------------------------------------
 Status2('busy','StitchIt Run',2);

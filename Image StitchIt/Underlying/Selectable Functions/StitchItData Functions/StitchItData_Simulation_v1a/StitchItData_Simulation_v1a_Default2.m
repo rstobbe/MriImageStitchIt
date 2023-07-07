@@ -2,7 +2,7 @@
 % 
 %=========================================================
 
-function [default] = StitchData_Simulation_v1a_Default2(SCRPTPATHS)
+function [default] = StitchItData_Simulation_v1a_Default2(SCRPTPATHS)
 
 global COMPASSINFO
 

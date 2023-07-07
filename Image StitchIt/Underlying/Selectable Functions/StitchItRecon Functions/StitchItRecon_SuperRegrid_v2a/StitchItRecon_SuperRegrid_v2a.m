@@ -69,22 +69,24 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Test  
     err.flag = 0;
     IMG = [];
-    if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
-        err.flag = 1;
-        err.msg = 'Data and Recon do not match';
-        return
-    end
-    if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
-        answer = questdlg('Data and Recon have different names - continue?');
-        switch answer
-            case 'No'
-                err.flag = 1;
-                err.msg = 'Data and Recon do not match';
-                return
-            case 'Cancel'
-                err.flag = 1;
-                err.msg = 'Data and Recon do not match';
-                return
+    if isprop(DataObj,'AcqsPerImage')
+        if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
+            err.flag = 1;
+            err.msg = 'Data and Recon do not match';
+            return
+        end
+        if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
+            answer = questdlg('Data and Recon have different names - continue?');
+            switch answer
+                case 'No'
+                    err.flag = 1;
+                    err.msg = 'Data and Recon do not match';
+                    return
+                case 'Cancel'
+                    err.flag = 1;
+                    err.msg = 'Data and Recon do not match';
+                    return
+            end
         end
     end
     if RECON.ReconNumber ~= length(RECON.AcqInfo)
@@ -102,7 +104,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% RxProfs
     DisplayStatusCompass('RxProfs',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             % Do scaling inside here...
+    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             
     
     DisplayStatusCompass('RxProfs: Initialize',3);
     StitchIt = StitchItReturnRxProfs();
@@ -114,14 +116,15 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfoRxp,RxChannels); 
-    
+    Data = DataObj.ScaleData(StitchIt,Data);
+
     DisplayStatusCompass('RxProfs: Generate',3);
     RxProfs = StitchIt.CreateImage(Data);
     
     %% Image
     DisplayStatusCompass('Super Recon',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
+    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             
     
     DisplayStatusCompass('Super Recon: Initialize',3);
     StitchIt = StitchItSuperRegridInputRxProf(); 
@@ -133,6 +136,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
+    Data = DataObj.ScaleData(StitchIt,Data);
 
     DisplayStatusCompass('Super Recon: Generate',3);
     Image = StitchIt.CreateImage(Data,RxProfs);
