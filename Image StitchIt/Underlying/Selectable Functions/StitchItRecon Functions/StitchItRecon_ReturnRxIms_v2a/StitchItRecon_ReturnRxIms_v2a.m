@@ -65,22 +65,24 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Test  
     err.flag = 0;
     IMG = [];
-    if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
-        err.flag = 1;
-        err.msg = 'Data and Recon do not match';
-        return
-    end
-    if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
-        answer = questdlg('Data and Recon have different names - continue?');
-        switch answer
-            case 'No'
-                err.flag = 1;
-                err.msg = 'Data and Recon do not match';
-                return
-            case 'Cancel'
-                err.flag = 1;
-                err.msg = 'Data and Recon do not match';
-                return
+    if isprop(DataObj,'AcqsPerImage')
+        if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
+            err.flag = 1;
+            err.msg = 'Data and Recon do not match';
+            return
+        end
+        if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
+            answer = questdlg('Data and Recon have different names - continue?');
+            switch answer
+                case 'No'
+                    err.flag = 1;
+                    err.msg = 'Data and Recon do not match';
+                    return
+                case 'Cancel'
+                    err.flag = 1;
+                    err.msg = 'Data and Recon do not match';
+                    return
+            end
         end
     end
 
@@ -108,7 +110,14 @@ function [IMG,err] = CreateImage(RECON,DataObj)
 
     DisplayStatusCompass('RxIms: Generate',3);
     Image = StitchIt.CreateImage(Data);
-    
+
+    %% SumOfSquares Profile
+    % SumRxProfs = RxProfs .* conj(RxProfs);
+    SosRxIms = sum(abs(Image).^2,4);
+    Image = cat(4,Image,SosRxIms);    
+    RootSosRxImage = sqrt(SosRxIms);
+    Image = cat(4,Image,RootSosRxImage); 
+
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};

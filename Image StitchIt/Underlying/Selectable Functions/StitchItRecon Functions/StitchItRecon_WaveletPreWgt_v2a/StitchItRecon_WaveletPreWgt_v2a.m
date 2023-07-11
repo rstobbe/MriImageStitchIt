@@ -3,14 +3,18 @@
 %   - 
 %==================================================================
 
-classdef StitchItRecon_ReturnChannels_v2a < handle
+classdef StitchItRecon_WaveletPreWgt_v2a < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_ReturnChannels_v2a'
+    Method = 'StitchItRecon_WaveletPreWgt_v2a'
     BaseMatrix
     Fov2Return
     AcqInfo
+    AcqInfoRxp
     ReconNumber
+    LevelsPerDim
+    NumIterations
+    Lambda
 end
 
 methods 
@@ -18,7 +22,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_ReturnChannels_v2a()              
+function RECON = StitchItRecon_WaveletPreWgt_v2a()              
 end
 
 %==================================================================
@@ -29,6 +33,12 @@ function InitViaCompass(RECON,RECONipt)
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
     RECON.Fov2Return = RECONipt.('Fov2Return');
     RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
+    RECON.NumIterations = str2double(RECONipt.('NumIterations'));
+    LevelsPerDim0 = RECONipt.('LevelsPerDim');
+    for n = 1:3
+        RECON.LevelsPerDim(n) = str2double(LevelsPerDim0(n));
+    end
+    RECON.Lambda = str2double(RECONipt.('Lambda'));
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -50,7 +60,8 @@ function InitViaCompass(RECON,RECONipt)
             return
         end
     end
-    RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;          
+    RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;
+    RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;       
 end
 
 %==================================================================
@@ -87,17 +98,22 @@ function [IMG,err] = CreateImage(RECON,DataObj)
             end
         end
     end
+    if RECON.ReconNumber ~= length(RECON.AcqInfo)
+        err.flag = 1;
+        err.msg = 'ReconNumber beyond length Recon_File';
+        return
+    end
 
     %% Reset GPUs
     DisplayStatusCompass('Reset GPUs',2);
     for n = 1:gpuDeviceCount
         gpuDevice(n);
-    end  
-    
+    end
+
     %% Return Channels
     DisplayStatusCompass('Return Channels',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
+    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             
 
     DisplayStatusCompass('RxChannels: Initialize',3);
     StitchIt = StitchItReturnChannels(); 
@@ -111,26 +127,91 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
 
     DisplayStatusCompass('RxIms: Generate',3);
-    Image = StitchIt.CreateImage(Data);
+    Image = StitchIt.CreateImage(Data);    
 
-    %% Testing Weighting 
-%     for n = 1:RxChannels
-%         AbsImage = abs(Image(:,:,:,n));
-%         test(n) = max(AbsImage(:));
-%         Image(:,:,:,n) = Image(:,:,:,n)/test(n);
-%     end
-%     SosImage = sum(abs(Image).^2,4);
-%     Image = cat(4,Image,SosImage);   
-%     RootSosImage = sqrt(SosImage);
-%     Image = cat(4,Image,RootSosImage);     
+    %% Weight Coils
+    for n = 1:RxChannels
+        AbsImage = abs(Image(:,:,:,n));
+        Scale(n) = max(AbsImage(:));
+    end  
+    Scale = Scale/mean(Scale);
+%    Scale = sqrt(Scale);    
+    
+    %% RxProfs
+    DisplayStatusCompass('RxProfs',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             % Do scaling inside here...
+    for n = 1:RxChannels
+        Data(:,:,n) = Data(:,:,n)/Scale(n);
+    end 
+    
+    DisplayStatusCompass('RxProfs: Initialize',3);
+    StitchIt = StitchItReturnRxProfs();
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    if strcmp(RECON.Fov2Return,'GridMatrix')
+        StitchIt.SetFov2ReturnGridMatrix;
+    else
+        StitchIt.SetFov2ReturnBaseMatrix;
+    end
+    RxChannels = DataObj.RxChannels;
+    StitchIt.Initialize(RECON.AcqInfoRxp,RxChannels); 
+    Data = DataObj.ScaleData(StitchIt,Data);
+    
+    DisplayStatusCompass('RxProfs: Generate',3);
+    RxProfs = StitchIt.CreateImage(Data);
+    
+    %% Image
+    DisplayStatusCompass('Initial Image',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             % Do scaling inside here...
+    for n = 1:RxChannels
+        Data(:,:,n) = Data(:,:,n)/Scale(n);
+    end 
+    
+    DisplayStatusCompass('Initial Image: Initialize',3);
+    StitchIt = StitchItSuperRegridInputRxProf(); 
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    if strcmp(RECON.Fov2Return,'GridMatrix')
+        StitchIt.SetFov2ReturnGridMatrix;
+    else
+        StitchIt.SetFov2ReturnBaseMatrix;
+    end
+    RxChannels = DataObj.RxChannels;
+    StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
+    Data = DataObj.ScaleData(StitchIt,Data);
+
+    DisplayStatusCompass('Initial Image: Generate',3);
+    Image0 = StitchIt.CreateImage(Data,RxProfs);
+    clear SitchIt
+    
+    %% Wavelet 
+    DisplayStatusCompass('CompSense Image',2);    
+    DisplayStatusCompass('CompSense Image: Initialize',3);
+    StitchIt = StitchItWaveletInputRxProfIm0(); 
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    StitchIt.SetLevelsPerDim(RECON.LevelsPerDim);
+    StitchIt.SetNumIterations(RECON.NumIterations);
+    StitchIt.SetLambda(RECON.Lambda);
+    if strcmp(RECON.Fov2Return,'GridMatrix')
+        StitchIt.SetFov2ReturnGridMatrix;
+    else
+        StitchIt.SetFov2ReturnBaseMatrix;
+    end
+    RxChannels = DataObj.RxChannels;
+    StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
+
+    DisplayStatusCompass('CompSense Image: Generate',3);
+    Image = StitchIt.CreateImage(Data,RxProfs,Image0);
     
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
     Panel(3,:) = {'Fov2Return',RECON.Fov2Return,'Output'};
+    Panel(4,:) = {'LevelsPerDim',RECON.LevelsPerDim,'Output'};
+    Panel(5,:) = {'NumIterations',RECON.NumIterations,'Output'};
+    Panel(6,:) = {'Lambda',RECON.Lambda,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
-    
-    NameSuffix = 'RetChan';
+    NameSuffix = 'Wavelet';
     IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
     clear StitchIt
     
