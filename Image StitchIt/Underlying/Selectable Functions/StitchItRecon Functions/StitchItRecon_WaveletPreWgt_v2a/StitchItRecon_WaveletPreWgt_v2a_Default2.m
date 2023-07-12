@@ -30,6 +30,12 @@ default{m,1}.entrystr = 'BaseMatrix';
 default{m,1}.options = {'BaseMatrix','GridMatrix'};
 
 m = m+1;
+default{m,1}.entrytype = 'Choose';
+default{m,1}.labelstr = 'PreScaleRxChans';
+default{m,1}.entrystr = 'No';
+default{m,1}.options = {'No','Linear','Root','ReduceHotLinear','ReduceHotRoot'};
+
+m = m+1;
 default{m,1}.entrytype = 'Input';
 default{m,1}.labelstr = 'ReconNumber';
 default{m,1}.entrystr = '1';

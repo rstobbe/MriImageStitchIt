@@ -2,7 +2,7 @@
 %
 %====================================================
 
-function [default] = StitchItRecon_ReturnChannels_v2a_Default2(SCRPTPATHS)
+function [default] = StitchItRecon_SuperRegridPreWgt_v2a_Default2(SCRPTPATHS)
 
 global COMPASSINFO
 
@@ -28,6 +28,12 @@ default{m,1}.entrytype = 'Choose';
 default{m,1}.labelstr = 'Fov2Return';
 default{m,1}.entrystr = 'BaseMatrix';
 default{m,1}.options = {'BaseMatrix','GridMatrix'};
+
+m = m+1;
+default{m,1}.entrytype = 'Choose';
+default{m,1}.labelstr = 'PreScaleRxChans';
+default{m,1}.entrystr = 'No';
+default{m,1}.options = {'No','Linear','Root','ReduceHotLinear','ReduceHotRoot'};
 
 m = m+1;
 default{m,1}.entrytype = 'Input';
