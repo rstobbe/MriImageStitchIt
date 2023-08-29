@@ -113,10 +113,10 @@ function [IMG,err] = CreateImage(RECON,DataObj)
 
     %% SumOfSquares Profile
     % SumRxProfs = RxProfs .* conj(RxProfs);
-    SosRxIms = sum(abs(Image).^2,4);
-    Image = cat(4,Image,SosRxIms);    
-    RootSosRxImage = sqrt(SosRxIms);
-    Image = cat(4,Image,RootSosRxImage); 
+%     SosRxIms = sum(abs(Image).^2,4);
+%     Image = cat(4,Image,SosRxIms);    
+%     RootSosRxImage = sqrt(SosRxIms);
+%     Image = cat(4,Image,RootSosRxImage); 
 
     %% Return
     Panel(1,:) = {'','','Output'};

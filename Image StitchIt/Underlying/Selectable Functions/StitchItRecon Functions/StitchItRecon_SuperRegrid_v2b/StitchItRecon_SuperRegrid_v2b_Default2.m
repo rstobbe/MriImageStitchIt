@@ -2,7 +2,7 @@
 %
 %====================================================
 
-function [default] = StitchItRecon_WaveletPreWgt_v2a_Default2(SCRPTPATHS)
+function [default] = StitchItRecon_SuperRegridPreWgt_v2a_Default2(SCRPTPATHS)
 
 global COMPASSINFO
 
@@ -40,20 +40,6 @@ default{m,1}.entrytype = 'Input';
 default{m,1}.labelstr = 'ReconNumber';
 default{m,1}.entrystr = '1';
 
-m = m+1;
-default{m,1}.entrytype = 'Input';
-default{m,1}.labelstr = 'LevelsPerDim';
-default{m,1}.entrystr = '111';
-
-m = m+1;
-default{m,1}.entrytype = 'Input';
-default{m,1}.labelstr = 'Lambda';
-default{m,1}.entrystr = '0.1';
-
-m = m+1;
-default{m,1}.entrytype = 'Input';
-default{m,1}.labelstr = 'NumIterations';
-default{m,1}.entrystr = '50';
 
 
 

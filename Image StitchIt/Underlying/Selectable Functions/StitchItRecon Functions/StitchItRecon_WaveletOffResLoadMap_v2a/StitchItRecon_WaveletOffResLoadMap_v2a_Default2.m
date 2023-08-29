@@ -2,7 +2,7 @@
 %
 %====================================================
 
-function [default] = StitchItRecon_WaveletPreWgt_v2a_Default2(SCRPTPATHS)
+function [default] = StitchItRecon_WaveletOffResLoadMap_v2a_Default2(SCRPTPATHS)
 
 global COMPASSINFO
 
@@ -14,6 +14,16 @@ default{m,1}.buttonname = 'Load';
 default{m,1}.runfunc1 = 'LoadReconCur';
 default{m,1}.(default{m,1}.runfunc1).curloc = SCRPTPATHS.outloc;
 default{m,1}.runfunc2 = 'LoadReconDisp';
+default{m,1}.(default{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
+
+m = m+1;
+default{m,1}.entrytype = 'RunExtFunc';
+default{m,1}.labelstr = 'OffResMap_File';
+default{m,1}.entrystr = '';
+default{m,1}.buttonname = 'Load';
+default{m,1}.runfunc1 = 'LoadImageCur';
+default{m,1}.(default{m,1}.runfunc1).curloc = SCRPTPATHS.outloc;
+default{m,1}.runfunc2 = 'LoadImageDisp';
 default{m,1}.(default{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
 
 m = m+1;

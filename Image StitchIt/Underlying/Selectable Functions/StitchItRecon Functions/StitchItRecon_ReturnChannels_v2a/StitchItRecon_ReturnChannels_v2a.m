@@ -109,7 +109,8 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
-
+    Data = DataObj.ScaleData(StitchIt,Data);
+    
     DisplayStatusCompass('RxIms: Generate',3);
     Image = StitchIt.CreateImage(Data);
 

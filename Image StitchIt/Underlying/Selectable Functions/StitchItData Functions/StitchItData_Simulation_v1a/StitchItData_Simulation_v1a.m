@@ -3,7 +3,7 @@
 %      
 %=========================================================
 
-function [SCRPTipt,SCRPTGBL,DATA,err] = StitchData_Simulation_v1a(SCRPTipt,SCRPTGBL,DATAipt)
+function [SCRPTipt,SCRPTGBL,DATA,err] = StitchItData_Simulation_v1a(SCRPTipt,SCRPTGBL,DATAipt)
 
 Status2('busy','Load DATA',2);
 Status2('done','',2);
