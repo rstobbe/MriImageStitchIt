@@ -72,11 +72,6 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     err.flag = 0;
     IMG = [];
     if isprop(DataObj,'AcqsPerImage')
-        if RECON.AcqInfoRxp.NumTraj ~= DataObj.AcqsPerImage
-            err.flag = 1;
-            err.msg = 'Data and Recon do not match';
-            return
-        end
         if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
             answer = questdlg('Data and Recon have different names - continue?');
             switch answer
@@ -107,8 +102,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     if not(strcmp(RECON.PreScaleRxChans,'No'))
         DisplayStatusCompass('PreScaleRxChans',2);
         DisplayStatusCompass('Load Data',3);
-        Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             
-
+        Data = DataObj.ReturnDataSet(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);        
         DisplayStatusCompass('PreScaleRxChans: Initialize',3);
         StitchIt = StitchItReturnChannels(); 
         StitchIt.SetBaseMatrix(RECON.BaseMatrix);
@@ -118,7 +112,6 @@ function [IMG,err] = CreateImage(RECON,DataObj)
             StitchIt.SetFov2ReturnBaseMatrix;
         end
         StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
-
         DisplayStatusCompass('PreScaleRxChans: Generate',3);
         Image = StitchIt.CreateImage(Data);
         clear StichIt
@@ -149,11 +142,10 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% RxProfs
     DisplayStatusCompass('RxProfs',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfoRxp);             
+    Data = DataObj.ReturnDataSet(RECON.AcqInfoRxp,[]);             
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end  
-    
     DisplayStatusCompass('RxProfs: Initialize',3);
     StitchIt = StitchItReturnRxProfs();
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
@@ -164,7 +156,6 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     StitchIt.Initialize(RECON.AcqInfoRxp,DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
-
     DisplayStatusCompass('RxProfs: Generate',3);
     RxProfs = StitchIt.CreateImage(Data);
     clear StichIt
@@ -172,11 +163,10 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Image
     DisplayStatusCompass('Super Recon',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnAllData(RECON.AcqInfo{RECON.ReconNumber});             
+    Data = DataObj.ReturnDataSet(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);             
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end 
-    
     DisplayStatusCompass('Super Recon: Initialize',3);
     StitchIt = StitchItSuperRegridInputRxProf(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
@@ -187,7 +177,6 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     end
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
-
     DisplayStatusCompass('Super Recon: Generate',3);
     Image = StitchIt.CreateImage(Data,RxProfs);
     clear StichIt
