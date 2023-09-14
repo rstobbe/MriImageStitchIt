@@ -266,16 +266,16 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
     DisplayStatusCompass('Iterate Image: Generate',3);
     Image = StitchIt.CreateImage(Data,RxProfs,OffResMap,OffResTimeArr,Image0); 
-    MaxEig = StitchIt.MaxEig
+    AbsMaxEig = abs(StitchIt.MaxEig);
     
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
-    Panel(3,:) = {'RxProfs',RECON.RxProfSel,'Output'};
-    Panel(4,:) = {'LevelsPerDim',RECON.LevelsPerDim,'Output'};
-    Panel(5,:) = {'NumIterations',RECON.NumIterations,'Output'};
-    Panel(6,:) = {'Lambda',RECON.Lambda,'Output'};
-    Panel(7,:) = {'PreScaleRxChans',RECON.PreScaleRxChans,'Output'};
+    Panel(3,:) = {'LevelsPerDim',RECON.LevelsPerDim,'Output'};
+    Panel(4,:) = {'NumIterations',RECON.NumIterations,'Output'};
+    Panel(5,:) = {'Lambda',RECON.Lambda,'Output'};
+    Panel(6,:) = {'PreScaleRxChans',RECON.PreScaleRxChans,'Output'};
+    Panel(7,:) = {'AbsMaxEig',AbsMaxEig,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     NameSuffix = 'WaveletOffRes';
     IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
