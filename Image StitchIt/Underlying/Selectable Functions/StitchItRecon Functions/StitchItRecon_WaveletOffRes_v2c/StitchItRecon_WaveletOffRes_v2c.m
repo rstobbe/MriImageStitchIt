@@ -41,7 +41,9 @@ function InitViaCompass(RECON,RECONipt)
     RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
     RECON.NumIterations = str2double(RECONipt.('NumIterations'));
     RECON.PreScaleRxChans = RECONipt.('PreScaleRxChans');
-    RECON.MaxEig = str2double(RECONipt.('MaxEig'));
+    if not(isempty(RECONipt.('MaxEig')))
+        RECON.MaxEig = str2double(RECONipt.('MaxEig'));
+    end
     RECON.DisplayResult = RECONipt.('DisplayResult');
     
     LevelsPerDim0 = RECONipt.('LevelsPerDim');
