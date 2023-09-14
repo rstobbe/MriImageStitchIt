@@ -264,6 +264,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
     DisplayStatusCompass('Iterate Image: Generate',3);
     Image = StitchIt.CreateImage(Data,RxProfs,OffResMap,OffResTimeArr,Image0); 
+    MaxEig = StitchIt.MaxEig
     
     %% Return
     Panel(1,:) = {'','','Output'};
