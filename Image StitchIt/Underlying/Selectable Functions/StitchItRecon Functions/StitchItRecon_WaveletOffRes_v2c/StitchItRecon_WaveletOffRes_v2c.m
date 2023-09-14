@@ -1,20 +1,27 @@
 %==================================================================
-% (v2b)
-%   - As StitchItRecon_SuperRegridOffResLoadMap_v2b
+% (v2c)
+%   - MaxEig to input
+%   - Display Result Input
+%   - Remove RxProfSel
 %==================================================================
 
-classdef StitchItRecon_SuperRegridOffRes_v2b < handle
+classdef StitchItRecon_WaveletOffRes_v2c < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_SuperRegridOffRes_v2b'
+    Method = 'StitchItRecon_WaveletOffRes_v2c'
     BaseMatrix
-    PreScaleRxChans
+    Fov2Return
     AcqInfo
     AcqInfoRxp
     AcqInfoOffRes
     ReconNumber
+    LevelsPerDim
+    NumIterations
+    Lambda
+    PreScaleRxChans
     Rcvrs
-    RxProfSel
+    MaxEig
+    DisplayResult
 end
 
 methods 
@@ -22,7 +29,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_SuperRegridOffRes_v2b()              
+function RECON = StitchItRecon_WaveletOffRes_v2c()              
 end
 
 %==================================================================
@@ -32,8 +39,16 @@ function InitViaCompass(RECON,RECONipt)
 
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
     RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
+    RECON.NumIterations = str2double(RECONipt.('NumIterations'));
     RECON.PreScaleRxChans = RECONipt.('PreScaleRxChans');
-    RECON.RxProfSel = RECONipt.('RxProfs');
+    RECON.MaxEig = str2double(RECONipt.('MaxEig'));
+    RECON.DisplayResult = RECONipt.('DisplayResult');
+    
+    LevelsPerDim0 = RECONipt.('LevelsPerDim');
+    for n = 1:3
+        RECON.LevelsPerDim(n) = str2double(LevelsPerDim0(n));
+    end
+    RECON.Lambda = str2double(RECONipt.('Lambda'));
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -57,7 +72,7 @@ function InitViaCompass(RECON,RECONipt)
     end
     RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;
     RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;
-    RECON.AcqInfoOffRes = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHOR;    
+    RECON.AcqInfoOffRes = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHOR;   
 end
 
 %==================================================================
@@ -74,7 +89,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Test  
     err.flag = 0;
     IMG = [];
-    if ~strcmp(RECON.AcqInfo{RECON.ReconNumber}.name,DataObj.DataInfo.TrajName)
+    if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
         answer = questdlg('Data and Recon have different names - continue?');
         switch answer
             case 'No'
@@ -103,7 +118,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     if not(strcmp(RECON.PreScaleRxChans,'No'))
         DisplayStatusCompass('PreScaleRxChans',2);
         DisplayStatusCompass('Load Data',3);
-        Data = DataObj.ReturnDataSet(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);     
+        Data = DataObj.ReturnDataSet(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);             
         DisplayStatusCompass('PreScaleRxChans: Initialize',3);
         StitchIt = StitchItReturnChannels(); 
         StitchIt.SetBaseMatrix(RECON.BaseMatrix);
@@ -134,30 +149,29 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         Scale = Scale0/mean(Scale0);
     else
         Scale = ones(1,DataObj.RxChannels);
-    end
+    end 
     
     %% RxProfs
-    if strcmp(RECON.RxProfSel,'Generated') 
-        DisplayStatusCompass('RxProfs',2);
-        DisplayStatusCompass('Load Data',3);
-        Data = DataObj.ReturnDataSet(RECON.AcqInfoRxp,[]);     
-        for n = 1:DataObj.RxChannels
-            Data(:,:,n) = Data(:,:,n)/Scale(n);
-        end 
-        DisplayStatusCompass('RxProfs: Initialize',3);
-        StitchIt = StitchItReturnRxProfs();
-        StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-        StitchIt.SetFov2ReturnBaseMatrix;
-        StitchIt.Initialize(RECON.AcqInfoRxp,DataObj.RxChannels); 
-        Data = DataObj.ScaleData(StitchIt,Data);
-        DisplayStatusCompass('RxProfs: Generate',3);
-        RxProfs = StitchIt.CreateImage(Data);
-        clear SitchIt
-    elseif strcmp(RECON.RxProfSel,'Actual') 
-        RcvrSos = sum(abs(RECON.Rcvrs).^2,4);
-        RxProfs = RECON.Rcvrs./sqrt(RcvrSos);
+    DisplayStatusCompass('RxProfs',2);
+    DisplayStatusCompass('Load Data',3);
+    Data = DataObj.ReturnDataSet(RECON.AcqInfoRxp,[]);
+    for n = 1:DataObj.RxChannels
+        Data(:,:,n) = Data(:,:,n)/Scale(n);
+    end 
+    DisplayStatusCompass('RxProfs: Initialize',3);
+    StitchIt = StitchItReturnRxProfs();
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    StitchIt.SetFov2ReturnBaseMatrix;
+    StitchIt.Initialize(RECON.AcqInfoRxp,DataObj.RxChannels); 
+    Data = DataObj.ScaleData(StitchIt,Data);
+    DisplayStatusCompass('RxProfs: Generate',3);
+    RxProfs = StitchIt.CreateImage(Data);
+    clear SitchIt
+    if RECON.DisplayResult
+        totgblnum = ImportImageCompass(RxProfs,'RxProfs');
+        Gbl2ImageOrtho('IM3',totgblnum);
     end
-
+    
     %% Create Off Resonance Map
     DisplayStatusCompass('Off Resonance Map',2);
     OffResImageNumber = 1;
@@ -202,40 +216,67 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         error('Nan problem');
     end
     %---
-    OffResMap = OffResMap/1e6;            % No map test
-    %---    
+    % OffResMap = OffResMap/1e6;            % No map test
+    %---      
+    if RECON.DisplayResult
+        totgblnum = ImportImageCompass(OffResMap,'OffResMap');
+        Gbl2ImageOrtho('IM3',totgblnum);
+    end
     
     %% Sampling Timing
 %     OffResTimeArr = DataObj.FirstSampDelay + RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;          % Doesn't work - come back to this
-    OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;
+    OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;  
     
-    %% Image
-    DisplayStatusCompass('Super Recon',2);
+    %% Initial Image
+    DisplayStatusCompass('Initial Image',2);
     DisplayStatusCompass('Load Data',3);
     Data = DataObj.ReturnDataSet(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber); 
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end 
-    DisplayStatusCompass('Super Recon: Initialize',3);
+    DisplayStatusCompass('Initial Image: Initialize',3);
     StitchIt = StitchItSuperRegridInputRxProfOffRes(); 
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     StitchIt.SetFov2ReturnBaseMatrix;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
-    DisplayStatusCompass('Super Recon: Generate',3);
-    Image = StitchIt.CreateImage(Data,RxProfs,OffResMap,OffResTimeArr);
-    clear StichIt
-    %---    
-%    Image(:,:,:,2) = OffResMap;
-    %---
+    DisplayStatusCompass('Initial Image: Generate',3);
+    Image0 = StitchIt.CreateImage(Data,RxProfs,OffResMap,OffResTimeArr);
+    clear StichIt    
+    if RECON.DisplayResult
+        totgblnum = ImportImageCompass(Image0,'Image0');
+        Gbl2ImageOrtho('IM3',totgblnum);
+    end
+    
+    %% Wavelet 
+    DisplayStatusCompass('Iterate Image',2);    
+    DisplayStatusCompass('Iterate Image: Initialize',3);
+    StitchIt = StitchItWaveletOffRes(); 
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    StitchIt.SetLevelsPerDim(RECON.LevelsPerDim);
+    StitchIt.SetNumIterations(RECON.NumIterations);
+    StitchIt.SetLambda(RECON.Lambda);
+    StitchIt.SetFov2ReturnBaseMatrix;
+    StitchIt.SetMaxEig(RECON.MaxEig);
+    StitchIt.SetDisplayResultOn;
+    StitchIt.SetDisplayIterationStep(10);
+    RxChannels = DataObj.RxChannels;
+    StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
+    DisplayStatusCompass('Iterate Image: Generate',3);
+    Image = StitchIt.CreateImage(Data,RxProfs,OffResMap,OffResTimeArr,Image0); 
     
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
+    Panel(3,:) = {'RxProfs',RECON.RxProfSel,'Output'};
+    Panel(4,:) = {'LevelsPerDim',RECON.LevelsPerDim,'Output'};
+    Panel(5,:) = {'NumIterations',RECON.NumIterations,'Output'};
+    Panel(6,:) = {'Lambda',RECON.Lambda,'Output'};
+    Panel(7,:) = {'PreScaleRxChans',RECON.PreScaleRxChans,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
-    
-    NameSuffix = 'SuperRegridOffResCor';
+    NameSuffix = 'WaveletOffRes';
     IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
+    clear StitchIt
     
 end
 
