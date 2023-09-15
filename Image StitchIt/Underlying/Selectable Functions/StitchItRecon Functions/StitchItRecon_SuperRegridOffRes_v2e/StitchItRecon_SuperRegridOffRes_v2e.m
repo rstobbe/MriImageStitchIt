@@ -129,6 +129,22 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         Scale0 = ones(1,DataObj.RxChannels);
         Scale0(Scale > mean(Scale)) = Scale(Scale > mean(Scale))/mean(Scale);
         Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower11')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.1;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower12')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.2;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower13')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.3;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower14')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.4;
+        Scale = Scale0/mean(Scale0);
     elseif strcmp(RECON.PreScaleRxChans,'ReduceHotRoot')
         Scale0 = ones(1,DataObj.RxChannels);
         Scale0(Scale > mean(Scale)) = sqrt(Scale(Scale > mean(Scale))/mean(Scale));

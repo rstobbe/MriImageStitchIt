@@ -26,8 +26,8 @@ default{m,1}.options = mat2cell(mat,length(mat));
 m = m+1;
 default{m,1}.entrytype = 'Choose';
 default{m,1}.labelstr = 'PreScaleRxChans';
-default{m,1}.entrystr = 'ReduceHotLinear';
-default{m,1}.options = {'No','Linear','Root','ReduceHotLinear','ReduceHotRoot'};
+default{m,1}.entrystr = 'No';
+default{m,1}.options = {'No','Linear','Root','ReduceHotLinear','ReduceHotPower11','ReduceHotPower12','ReduceHotPower13','ReduceHotPower14','ReduceHotRoot'};
 
 m = m+1;
 default{m,1}.entrytype = 'Input';
