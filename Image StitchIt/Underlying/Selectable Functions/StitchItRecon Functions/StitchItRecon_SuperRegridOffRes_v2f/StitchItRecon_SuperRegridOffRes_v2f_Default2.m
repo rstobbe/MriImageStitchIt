@@ -2,7 +2,7 @@
 %
 %====================================================
 
-function [default] = StitchItRecon_ReturnOffResMap_v2b_Default2(SCRPTPATHS)
+function [default] = StitchItRecon_SuperRegridOffRes_v2e_Default2(SCRPTPATHS)
 
 global COMPASSINFO
 
@@ -25,10 +25,19 @@ default{m,1}.options = mat2cell(mat,length(mat));
 
 m = m+1;
 default{m,1}.entrytype = 'Choose';
-default{m,1}.labelstr = 'Iterate';
+default{m,1}.labelstr = 'PreScaleRxChans';
 default{m,1}.entrystr = 'No';
-default{m,1}.options = {'Yes','No'};
+default{m,1}.options = {'No','Linear','Root','ReduceHotLinear','ReduceHotPower11','ReduceHotPower12','ReduceHotPower13','ReduceHotPower14','ReduceHotRoot'};
 
+m = m+1;
+default{m,1}.entrytype = 'Input';
+default{m,1}.labelstr = 'ReconNumber';
+default{m,1}.entrystr = '1';
 
+m = m+1;
+default{m,1}.entrytype = 'Choose';
+default{m,1}.labelstr = 'DisplayResult';
+default{m,1}.entrystr = 'Yes';
+default{m,1}.options = {'No','Yes'};
 
 
