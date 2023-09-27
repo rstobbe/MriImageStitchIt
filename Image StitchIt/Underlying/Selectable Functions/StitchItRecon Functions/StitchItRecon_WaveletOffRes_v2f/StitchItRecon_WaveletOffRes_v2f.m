@@ -166,10 +166,10 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Interpolate
     Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
     [X,Y,Z] = meshgrid(Array,Array,Array);
-    OffResMapInt = interp3(OffResMap,X,Y,Z);
+    OffResMapInt = interp3(OffResMap,X,Y,Z,'maximak');
     SensInt = zeros(RECON.BaseMatrix,RECON.BaseMatrix,RECON.BaseMatrix,RxChannels,'single');
     for n = 1:RxChannels
-        SensInt(:,:,:,n) = interp3(Sens(:,:,:,n),X,Y,Z);
+        SensInt(:,:,:,n) = interp3(Sens(:,:,:,n),X,Y,Z,'makima');
     end
 
     %% Sampling Timing
