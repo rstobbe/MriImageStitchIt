@@ -1,12 +1,12 @@
 %==================================================================
-% (v2g)
+% (v2h)
 %   - Add Rx Prof Back In.
 %==================================================================
 
-classdef StitchItRecon_WaveletOffRes_v2g < handle
+classdef StitchItRecon_WaveletOffRes_v2h < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_WaveletOffRes_v2g'
+    Method = 'StitchItRecon_WaveletOffRes_v2h'
     BaseMatrix
     Fov2Return
     AcqInfo
@@ -27,7 +27,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_WaveletOffRes_v2g()              
+function RECON = StitchItRecon_WaveletOffRes_v2h()              
 end
 
 %==================================================================
@@ -202,12 +202,12 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     Image2 = StitchIt.CreateImage(Data);
     
     DisplayStatusCompass('Combine Images',3);
-    Image = cat(5,Image1,Image2);
+    Image0 = cat(5,Image1,Image2);
     RefCoil = 5;
     Vox = RECON.AcqInfoOffRes{OffResImageNumber}.Fov./OffResBaseMatrix;
     Vox = [Vox Vox Vox];
-    KernRad = 20;
-    [Image,Sens] = AdaptiveCmbRws(Image,Vox,RefCoil,KernRad);
+    KernRad = 10;
+    [Image,Sens1] = AdaptiveCmbRws(Image0,Vox,RefCoil,KernRad);
 %     ImportImageCompass(Image,'Image');
 %     ImportImageCompass(Sens,'Sens');
 
@@ -224,15 +224,19 @@ function [IMG,err] = CreateImage(RECON,DataObj)
 
     totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],max(abs(OffResMap(:))));
     Gbl2ImageOrtho('IM3',totgblnum);
-    
+
+    Image01 = Image0 + 0.01;
+    KernRad = 10;
+    [Image,Sens2] = AdaptiveCmbRws(Image01,Vox,RefCoil,KernRad);    
+
     %% Interpolate
     Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
     [X,Y,Z] = meshgrid(Array,Array,Array);
     OffResMapInt = interp3(OffResMap,X,Y,Z,'maximak');
-%     SensInt = zeros(RECON.BaseMatrix,RECON.BaseMatrix,RECON.BaseMatrix,RxChannels,'single');
-%     for n = 1:RxChannels
-%         SensInt(:,:,:,n) = interp3(Sens(:,:,:,n),X,Y,Z,'makima');
-%     end
+    SensInt = zeros(RECON.BaseMatrix,RECON.BaseMatrix,RECON.BaseMatrix,RxChannels,'single');
+    for n = 1:RxChannels
+        SensInt(:,:,:,n) = interp3(Sens2(:,:,:,n),X,Y,Z,'makima');
+    end
 
     %% Sampling Timing
     OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;  
@@ -251,7 +255,8 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
     DisplayStatusCompass('Initial Image: Generate',3);
-    Image0 = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr);
+%    Image0 = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr);
+    Image0 = StitchIt.CreateImage(Data,SensInt,OffResMapInt,OffResTimeArr);
     clear StichIt    
     if RECON.DisplayResult
         totgblnum = ImportImageCompass(Image0,'Image0');
@@ -273,7 +278,8 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     RxChannels = DataObj.RxChannels;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
     DisplayStatusCompass('Iterate Image: Generate',3);
-    Image = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr,Image0); 
+%    Image = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr,Image0); 
+    Image = StitchIt.CreateImage(Data,SensInt,OffResMapInt,OffResTimeArr,Image0); 
     AbsMaxEig = abs(StitchIt.MaxEig);
     
     %% Return
