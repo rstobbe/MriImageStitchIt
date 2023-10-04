@@ -257,6 +257,13 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         totgblnum = ImportImageCompass(Image0,'Image0');
         Gbl2ImageOrtho('IM3',totgblnum);
     end
+
+    %% Reset GPUs
+    DisplayStatusCompass('Reset GPUs',2);
+    for n = 1:gpuDeviceCount
+        gpuDevice(n);
+    end    
+%     gpuDevice(3);       % Don't do this!  Needs to stay as the last one!  
     
     %% Wavelet 
     DisplayStatusCompass('Iterate Image',2);    

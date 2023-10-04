@@ -1,6 +1,6 @@
 %==================================================================
 % (v2h)
-%   - Add Rx Prof Back In.
+%   - more messing around
 %==================================================================
 
 classdef StitchItRecon_WaveletOffRes_v2h < handle
@@ -178,6 +178,9 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     OffResImageNumber = 1;
     DisplayStatusCompass('Load Data',3);
     Data = DataObj.ReturnDataSetWithShift(RECON.AcqInfoOffRes{OffResImageNumber},OffResImageNumber);        
+    for n = 1:DataObj.RxChannels
+        Data(:,:,n) = Data(:,:,n)/Scale(n);
+    end 
     DisplayStatusCompass('Image1: Initialize',3);
     StitchIt = StitchItReturnChannels(); 
     StitchIt.SetBaseMatrix(OffResBaseMatrix);
@@ -191,6 +194,9 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     OffResImageNumber = 2;
     DisplayStatusCompass('Load Data',3);
     Data = DataObj.ReturnDataSetWithShift(RECON.AcqInfoOffRes{OffResImageNumber},OffResImageNumber);        
+    for n = 1:DataObj.RxChannels
+        Data(:,:,n) = Data(:,:,n)/Scale(n);
+    end 
     DisplayStatusCompass('Image2: Initialize',3);
     StitchIt = StitchItReturnChannels(); 
     StitchIt.SetBaseMatrix(OffResBaseMatrix);
@@ -225,10 +231,12 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],max(abs(OffResMap(:))));
     Gbl2ImageOrtho('IM3',totgblnum);
 
-    Image01 = Image0 + 0.01;
-    KernRad = 10;
+%----
+    Image01 = Image0 + 0.02;                                                    % doesn't seem to work
+    KernRad = RECON.AcqInfoOffRes{OffResImageNumber}.Fov./OffResBaseMatrix;
     [Image,Sens2] = AdaptiveCmbRws(Image01,Vox,RefCoil,KernRad);    
-
+%----
+    
     %% Interpolate
     Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
     [X,Y,Z] = meshgrid(Array,Array,Array);
