@@ -54,11 +54,27 @@ function InitViaCompass(RECON,RECONipt)
             ErrDisp(err);
             return
         end
+        if isfield(RECONipt.('OffResMap_File').Struct,'selectedfile')
+            file = RECONipt.('OffResMap_File').Struct.selectedfile;
+            if not(exist(file,'file'))
+                err.flag = 1;
+                err.msg = '(Re) Load OffResMap_File';
+                ErrDisp(err);
+                return
+            else
+                load(file);
+                RECONipt.([CallingLabel,'_Data']).('OffResMap_File_Data') = saveData;
+            end
+        else
+            err.flag = 1;
+            err.msg = '(Re) Load OffResMap_File';
+            ErrDisp(err);
+            return
+        end
     end
     RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;
     RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;
     RECON.OffResMap = single(RECONipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.Im(:,:,:,5));            % should be index 5
-    RECON.Rcvrs = single(RECONipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.Im(:,:,:,6:end));            % should be index 
 end
 
 %==================================================================

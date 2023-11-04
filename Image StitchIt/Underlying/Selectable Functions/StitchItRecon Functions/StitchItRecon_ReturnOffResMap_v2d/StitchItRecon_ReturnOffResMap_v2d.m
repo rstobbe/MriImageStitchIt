@@ -3,13 +3,14 @@
 %   - Iterate
 %==================================================================
 
-classdef StitchItRecon_ReturnOffResMap_v2c < handle
+classdef StitchItRecon_ReturnOffResMap_v2d < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_ReturnOffResMap_v2c'
+    Method = 'StitchItRecon_ReturnOffResMap_v2d'
     BaseMatrix
     AcqInfoOffRes
     Iterate
+    RelMaskVal
 end
 
 methods 
@@ -17,7 +18,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_ReturnOffResMap_v2c()              
+function RECON = StitchItRecon_ReturnOffResMap_v2d()              
 end
 
 %==================================================================
@@ -27,6 +28,7 @@ function InitViaCompass(RECON,RECONipt)
 
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
     RECON.Iterate = RECONipt.('Iterate');
+    RECON.RelMaskVal = str2double(RECONipt.('RelMaskVal'));
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -119,22 +121,27 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     Vox = RECON.AcqInfoOffRes{OffResImageNumber}.Fov./RECON.BaseMatrix;
     Vox = [Vox Vox Vox];
     KernRad = 20;
-    [Image,Sens] = AdaptiveCmbRws(Image,Vox,RefCoil,KernRad);
-%    [Image,Sens] = AdaptiveCmbRws2(Image,Vox,RefCoil,KernRad);
+    %--
+    %[Image,Sens] = AdaptiveCmbRws(Image,Vox,RefCoil,KernRad);
+    [Image,Sens] = AdaptiveCmbRws2(Image,Vox,RefCoil,KernRad);
+    %--
     ImportImageCompass(Image,'Image');
     ImportImageCompass(Sens,'Sens');
 
     DisplayStatusCompass('Create Map',3);
     TimeDiff = (RECON.AcqInfoOffRes{2}.SampStartTime - RECON.AcqInfoOffRes{1}.SampStartTime)/1000;
     OffResMap0 = (angle(Image(:,:,:,2))-angle(Image(:,:,:,1)))/(2*pi*TimeDiff);
-    MaxFreq = 0.5/TimeDiff;
     OffResMap = single(OffResMap0);
+    
+    MaxFreq = 0.5/TimeDiff;    
     OffResMap(OffResMap0 < -MaxFreq) = 1/TimeDiff + OffResMap0(OffResMap0 < -MaxFreq);
     OffResMap(OffResMap0 > MaxFreq) = OffResMap0(OffResMap0 > MaxFreq) - 1/TimeDiff;
     
     MaskImage = abs(Image(:,:,:,1));
-    OffResMap(MaskImage < 0.05*max(MaskImage(:))) = 0;
-
+    OffResMap(MaskImage < RECON.RelMaskVal*max(MaskImage(:))) = 0;
+    MaskImage = abs(Image(:,:,:,2));
+    OffResMap(MaskImage < RECON.RelMaskVal*max(MaskImage(:))) = 0;
+   
     totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],max(abs(OffResMap(:))));
     Gbl2ImageOrtho('IM3',totgblnum);
     
@@ -178,18 +185,28 @@ function [IMG,err] = CreateImage(RECON,DataObj)
             Vox = RECON.AcqInfoOffRes{OffResImageNumber}.Fov./RECON.BaseMatrix;
             Vox = [Vox Vox Vox];
             KernRad = 20;
-            [Image,Sens] = AdaptiveCmbRws(Image,Vox,RefCoil,KernRad);
+            %--
+            %[Image,Sens] = AdaptiveCmbRws(Image,Vox,RefCoil,KernRad);
+            [Image,Sens] = AdaptiveCmbRws2(Image,Vox,RefCoil,KernRad);
+            %--
             ImportImageCompass(Image,'Image');
             ImportImageCompass(Sens,'Sens');
 
             TimeDiff = (RECON.AcqInfoOffRes{2}.SampStartTime - RECON.AcqInfoOffRes{1}.SampStartTime)/1000;
             OffResMap0 = (angle(Image(:,:,:,2))-angle(Image(:,:,:,1)))/(2*pi*TimeDiff);
-            MaxFreq = 0.5/TimeDiff;
-            OffResMap = OffResMap0;
+            OffResMap = single(OffResMap0);
+            
+            DisplayStatusCompass('Create Map',3);
+            MaxFreq = 0.5/TimeDiff;    
             OffResMap(OffResMap0 < -MaxFreq) = 1/TimeDiff + OffResMap0(OffResMap0 < -MaxFreq);
             OffResMap(OffResMap0 > MaxFreq) = OffResMap0(OffResMap0 > MaxFreq) - 1/TimeDiff;
+            
+            MaskImage = abs(Image(:,:,:,1));
+            OffResMap(MaskImage < RECON.RelMaskVal*max(MaskImage(:))) = 0;
+            MaskImage = abs(Image(:,:,:,2));
+            OffResMap(MaskImage < RECON.RelMaskVal*max(MaskImage(:))) = 0;
 
-            totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],ceil(MaxFreq));
+            totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],max(abs(OffResMap(:))));
             Gbl2ImageOrtho('IM3',totgblnum);
         end
     end

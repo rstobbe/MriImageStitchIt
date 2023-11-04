@@ -1,18 +1,22 @@
 %==================================================================
-% (v2e)
-%   - Include Position Shift
+% (v2h)
+%   - Include Option for no off-res correction
 %==================================================================
 
-classdef StitchItRecon_SuperRegrid_v2e < handle
+classdef StitchItRecon_SuperRegridOffResExtMap_v2h < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_SuperRegrid_v2e'
+    Method = 'StitchItRecon_SuperRegridOffResExtMap_v2h'
     BaseMatrix
-    Fov2Return
     PreScaleRxChans
     AcqInfo
     AcqInfoRxp
+    AcqInfoOffRes
     ReconNumber
+    Rcvrs
+    OffResMap
+    Shift
+    DoOffResCor
 end
 
 methods 
@@ -20,7 +24,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_SuperRegrid_v2e()              
+function RECON = StitchItRecon_SuperRegridOffResExtMap_v2h()              
 end
 
 %==================================================================
@@ -29,9 +33,9 @@ end
 function InitViaCompass(RECON,RECONipt)    
 
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
-    RECON.Fov2Return = RECONipt.('Fov2Return');
     RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
     RECON.PreScaleRxChans = RECONipt.('PreScaleRxChans');
+    RECON.DoOffResCor = RECONipt.('DoOffResCor');
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -54,7 +58,9 @@ function InitViaCompass(RECON,RECONipt)
         end
     end
     RECON.AcqInfo = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH;
-    RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;       
+    RECON.AcqInfoRxp = RECONipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP;
+    RECON.OffResMap = single(RECONipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.Im);
+    RECON.Shift = single(RECONipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.FovShift);
 end
 
 %==================================================================
@@ -71,19 +77,17 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% Test  
     err.flag = 0;
     IMG = [];
-    if isprop(DataObj,'AcqsPerImage')
-        if ~strcmp(RECON.AcqInfoRxp.name,DataObj.DataInfo.TrajName)
-            answer = questdlg('Data and Recon have different names - continue?');
-            switch answer
-                case 'No'
-                    err.flag = 1;
-                    err.msg = 'Data and Recon do not match';
-                    return
-                case 'Cancel'
-                    err.flag = 1;
-                    err.msg = 'Data and Recon do not match';
-                    return
-            end
+    if ~strcmp(RECON.AcqInfo{RECON.ReconNumber}.name,DataObj.DataInfo.TrajName)
+        answer = questdlg('Data and Recon have different names - continue?');
+        switch answer
+            case 'No'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
+            case 'Cancel'
+                err.flag = 1;
+                err.msg = 'Data and Recon do not match';
+                return
         end
     end
     if RECON.ReconNumber ~= length(RECON.AcqInfo)
@@ -102,15 +106,11 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     if not(strcmp(RECON.PreScaleRxChans,'No'))
         DisplayStatusCompass('PreScaleRxChans',2);
         DisplayStatusCompass('Load Data',3);
-        Data = DataObj.ReturnDataSetWithShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);        
+        Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift);     
         DisplayStatusCompass('PreScaleRxChans: Initialize',3);
         StitchIt = StitchItReturnChannels(); 
         StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-        if strcmp(RECON.Fov2Return,'GridMatrix')
-            StitchIt.SetFov2ReturnGridMatrix;
-        else
-            StitchIt.SetFov2ReturnBaseMatrix;
-        end
+        StitchIt.SetFov2ReturnBaseMatrix;
         StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
         DisplayStatusCompass('PreScaleRxChans: Generate',3);
         Image = StitchIt.CreateImage(Data);
@@ -158,54 +158,76 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     %% RxProfs
     DisplayStatusCompass('RxProfs',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnDataSetWithShift(RECON.AcqInfoRxp,[]);             
+    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfoRxp,[],RECON.Shift);     
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
-    end  
+    end 
     DisplayStatusCompass('RxProfs: Initialize',3);
     StitchIt = StitchItReturnRxProfs();
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-    if strcmp(RECON.Fov2Return,'GridMatrix')
-        StitchIt.SetFov2ReturnGridMatrix;
-    else
-        StitchIt.SetFov2ReturnBaseMatrix;
-    end
+    StitchIt.SetFov2ReturnBaseMatrix;
     StitchIt.Initialize(RECON.AcqInfoRxp,DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
     DisplayStatusCompass('RxProfs: Generate',3);
     RxProfs = StitchIt.CreateImage(Data);
-    clear StichIt
+    clear SitchIt
+
+    %% Interpolate
+    if strcmp(RECON.DoOffResCor,'Yes')
+        DisplayStatusCompass('Off Resonance Map',2);
+        DisplayStatusCompass('Interpolate',3);
+        sz = size(RECON.OffResMap);
+        OffResBaseMatrix = sz(1);
+        Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
+        [X,Y,Z] = meshgrid(Array,Array,Array);
+        OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'maximak');
+        %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'cubic');
+        %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'linear');  NaNs
+        totgblnum = ImportOffResMapCompass(OffResMapInt,'OffResMapInt',[],[],max(abs(RECON.OffResMap(:))));
+        Gbl2ImageOrtho('IM3',totgblnum);
+    end
+    
+    %% Sampling Timing
+    OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;
     
     %% Image
     DisplayStatusCompass('Super Recon',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnDataSetWithShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber);             
+    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift); 
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end 
     DisplayStatusCompass('Super Recon: Initialize',3);
-    StitchIt = StitchItSuperRegridInputRxProf(); 
-    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-    if strcmp(RECON.Fov2Return,'GridMatrix')
-        StitchIt.SetFov2ReturnGridMatrix;
+    if strcmp(RECON.DoOffResCor,'Yes')
+        StitchIt = StitchItSuperRegridInputRxProfOffRes();
     else
-        StitchIt.SetFov2ReturnBaseMatrix;
+        StitchIt = StitchItSuperRegridInputRxProf(); 
     end
+    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
+    StitchIt.SetFov2ReturnBaseMatrix;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
     DisplayStatusCompass('Super Recon: Generate',3);
     tic
-    Image = StitchIt.CreateImage(Data,RxProfs);
+    if strcmp(RECON.DoOffResCor,'Yes')
+        Image = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr);
+    else
+        Image = StitchIt.CreateImage(Data,RxProfs);
+    end
     toc
+    beep
     clear StichIt
     
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
-    Panel(3,:) = {'Fov2Return',RECON.Fov2Return,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'SuperRegrid';
+    if strcmp(RECON.DoOffResCor,'Yes')
+        NameSuffix = 'SuperRegridOffResCor';
+    else
+        NameSuffix = 'SuperRegrid';
+    end
     IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
     
 end

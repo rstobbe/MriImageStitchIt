@@ -172,7 +172,7 @@ function [IMG,err] = CreateImage(RECON,DataObj)
 %    DataObj.AddShiftDim3(-100);    
 
     %% Create Off Resonance Map
-    OffResBaseMatrix = 70;
+    OffResBaseMatrix = 150;
     DisplayStatusCompass('Off Resonance Map',2);
     OffResImageNumber = 1;
     DisplayStatusCompass('Load Data',3);
@@ -220,10 +220,8 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     
     MaskImage = abs(Image(:,:,:,1));
     OffResMap(MaskImage < 0.05*max(MaskImage(:))) = 0;
-
-    totgblnum = ImportOffResMapCompass(OffResMap,'OffResMap',[],[],max(abs(OffResMap(:))));
-    Gbl2ImageOrtho('IM3',totgblnum);
-
+%     OffResMap(MaskImage < 0.01*max(MaskImage(:))) = 0;
+    
     %% Interpolate
     Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
     [X,Y,Z] = meshgrid(Array,Array,Array);
@@ -233,6 +231,9 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         SensInt(:,:,:,n) = interp3(Sens(:,:,:,n),X,Y,Z,'makima');
     end
 
+    totgblnum = ImportOffResMapCompass(OffResMapInt,'OffResMapInt',[],[],max(abs(OffResMap(:))));
+    Gbl2ImageOrtho('IM3',totgblnum);    
+    
     %% Sampling Timing
     OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;
     
