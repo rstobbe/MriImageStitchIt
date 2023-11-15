@@ -1,26 +1,23 @@
 %==================================================================
-% (v2h)
-%   - Use 'Shift from OffResMap'
+% (v2i)
+%   - Include 'DisplayVerbose'
 %==================================================================
 
-classdef StitchItRecon_WaveletOffResExtMap_v2h < handle
+classdef StitchItRecon_SuperRegridOffResExtMap_v2i < handle
 
 properties (SetAccess = private)                   
-    Method = 'StitchItRecon_WaveletOffResExtMap_v2h'
+    Method = 'StitchItRecon_SuperRegridOffResExtMap_v2i'
     BaseMatrix
-    Fov2Return
+    PreScaleRxChans
     AcqInfo
     AcqInfoRxp
-    OffResMap
+    AcqInfoOffRes
     ReconNumber
-    LevelsPerDim
-    NumIterations
-    Lambda
     Rcvrs
-    MaxEig
-    DisplayResult
-    PreScaleRxChans
+    OffResMap
     Shift
+    DoOffResCor
+    DisplayVerbose
 end
 
 methods 
@@ -28,7 +25,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function RECON = StitchItRecon_WaveletOffResExtMap_v2h()              
+function RECON = StitchItRecon_SuperRegridOffResExtMap_v2i()              
 end
 
 %==================================================================
@@ -38,18 +35,9 @@ function InitViaCompass(RECON,RECONipt)
 
     RECON.BaseMatrix = str2double(RECONipt.('BaseMatrix'));
     RECON.ReconNumber = str2double(RECONipt.('ReconNumber'));
-    RECON.NumIterations = str2double(RECONipt.('NumIterations'));
     RECON.PreScaleRxChans = RECONipt.('PreScaleRxChans');
-    if not(isempty(RECONipt.('MaxEig')))
-        RECON.MaxEig = str2double(RECONipt.('MaxEig'));
-    end
-    RECON.DisplayResult = RECONipt.('DisplayResult');
-    
-    LevelsPerDim0 = RECONipt.('LevelsPerDim');
-    for n = 1:3
-        RECON.LevelsPerDim(n) = str2double(LevelsPerDim0(n));
-    end
-    RECON.Lambda = str2double(RECONipt.('Lambda'));
+    RECON.DoOffResCor = RECONipt.('DoOffResCor');
+    RECON.DisplayVerbose = RECONipt.('DisplayVerbose'); 
     
     CallingLabel = RECONipt.Struct.labelstr;
     if not(isfield(RECONipt,[CallingLabel,'_Data']))
@@ -115,12 +103,12 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     for n = 1:gpuDeviceCount
         gpuDevice(n);
     end
-    
+
     %% PreScaleRxChans
     if not(strcmp(RECON.PreScaleRxChans,'No'))
         DisplayStatusCompass('PreScaleRxChans',2);
         DisplayStatusCompass('Load Data',3);
-        Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift);             
+        Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift);     
         DisplayStatusCompass('PreScaleRxChans: Initialize',3);
         StitchIt = StitchItReturnChannels(); 
         StitchIt.SetBaseMatrix(RECON.BaseMatrix);
@@ -145,18 +133,34 @@ function [IMG,err] = CreateImage(RECON,DataObj)
         Scale0 = ones(1,DataObj.RxChannels);
         Scale0(Scale > mean(Scale)) = Scale(Scale > mean(Scale))/mean(Scale);
         Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower11')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.1;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower12')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.2;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower13')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.3;
+        Scale = Scale0/mean(Scale0);
+    elseif strcmp(RECON.PreScaleRxChans,'ReduceHotPower14')
+        Scale0 = ones(1,DataObj.RxChannels);
+        Scale0(Scale > mean(Scale)) = (Scale(Scale > mean(Scale))/mean(Scale)).^1.4;
+        Scale = Scale0/mean(Scale0);
     elseif strcmp(RECON.PreScaleRxChans,'ReduceHotRoot')
         Scale0 = ones(1,DataObj.RxChannels);
         Scale0(Scale > mean(Scale)) = sqrt(Scale(Scale > mean(Scale))/mean(Scale));
         Scale = Scale0/mean(Scale0);
     else
         Scale = ones(1,DataObj.RxChannels);
-    end 
+    end
     
     %% RxProfs
     DisplayStatusCompass('RxProfs',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfoRxp,[],RECON.Shift);
+    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfoRxp,[],RECON.Shift);     
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end 
@@ -169,94 +173,64 @@ function [IMG,err] = CreateImage(RECON,DataObj)
     DisplayStatusCompass('RxProfs: Generate',3);
     RxProfs = StitchIt.CreateImage(Data);
     clear SitchIt
-    if strcmp(RECON.DisplayResult,'Yes')
-        totgblnum = ImportImageCompass(RxProfs,'RxProfs');
-        Gbl2ImageOrtho('IM3',totgblnum);
-    end
 
     %% Interpolate
-    DisplayStatusCompass('Off Resonance Map',2);
-    DisplayStatusCompass('Interpolate',3);
-    sz = size(RECON.OffResMap);
-    OffResBaseMatrix = sz(1);
-    Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
-    [X,Y,Z] = meshgrid(Array,Array,Array);
-    OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'maximak');
-    %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'cubic');
-    %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'linear');
-    if strcmp(RECON.DisplayResult,'Yes')
+    if strcmp(RECON.DoOffResCor,'Yes')
+        DisplayStatusCompass('Off Resonance Map',2);
+        DisplayStatusCompass('Interpolate',3);
+        sz = size(RECON.OffResMap);
+        OffResBaseMatrix = sz(1);
+        Array = linspace((OffResBaseMatrix/RECON.BaseMatrix)/2,OffResBaseMatrix-(OffResBaseMatrix/RECON.BaseMatrix)/2,RECON.BaseMatrix) + 0.5;
+        [X,Y,Z] = meshgrid(Array,Array,Array);
+        OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'maximak');
+        %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'cubic');
+        %OffResMapInt = interp3(RECON.OffResMap,X,Y,Z,'linear');  NaNs
         totgblnum = ImportOffResMapCompass(OffResMapInt,'OffResMapInt',[],[],max(abs(RECON.OffResMap(:))));
         Gbl2ImageOrtho('IM3',totgblnum);
     end
-
-    %% Sampling Timing
-    OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;  
     
-    %% Initial Image
-    DisplayStatusCompass('Initial Image',2);
+    %% Sampling Timing
+    OffResTimeArr = RECON.AcqInfo{RECON.ReconNumber}.OffResTimeArr;
+    
+    %% Image
+    DisplayStatusCompass('Super Recon',2);
     DisplayStatusCompass('Load Data',3);
-    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift);
+    Data = DataObj.ReturnDataSetWithExternalShift(RECON.AcqInfo{RECON.ReconNumber},RECON.ReconNumber,RECON.Shift); 
     for n = 1:DataObj.RxChannels
         Data(:,:,n) = Data(:,:,n)/Scale(n);
     end 
-    DisplayStatusCompass('Initial Image: Initialize',3);
-    StitchIt = StitchItSuperRegridInputRxProfOffRes(); 
+    DisplayStatusCompass('Super Recon: Initialize',3);
+    if strcmp(RECON.DoOffResCor,'Yes')
+        StitchIt = StitchItSuperRegridInputRxProfOffRes();
+    else
+        StitchIt = StitchItSuperRegridInputRxProf(); 
+    end
     StitchIt.SetBaseMatrix(RECON.BaseMatrix);
     StitchIt.SetFov2ReturnBaseMatrix;
     StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},DataObj.RxChannels); 
     Data = DataObj.ScaleData(StitchIt,Data);
-    DisplayStatusCompass('Initial Image: Generate',3);
-    Image0 = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr);
-    clear StichIt    
-    if strcmp(RECON.DisplayResult,'Yes')
-        totgblnum = ImportImageCompass(Image0,'Image0');
-        Gbl2ImageOrtho('IM3',totgblnum);
-    end
-
-    %% Reset GPUs
-    DisplayStatusCompass('Reset GPUs',2);
-    for n = 1:gpuDeviceCount
-        gpuDevice(n);
-    end    
-%     gpuDevice(3);       % Don't do this!  Needs to stay as the last one!  
-    
-    %% Wavelet 
-    DisplayStatusCompass('Iterate Image',2);    
-    DisplayStatusCompass('Iterate Image: Initialize',3);
-    StitchIt = StitchItWaveletOffRes(); 
-    StitchIt.SetBaseMatrix(RECON.BaseMatrix);
-    StitchIt.SetLevelsPerDim(RECON.LevelsPerDim);
-    StitchIt.SetNumIterations(RECON.NumIterations);
-    StitchIt.SetLambda(RECON.Lambda);
-    StitchIt.SetFov2ReturnBaseMatrix;
-    StitchIt.SetMaxEig(RECON.MaxEig);
-    StitchIt.SetDisplayResultOn;
-%--
-    StitchIt.SetDisplayIterationStep(10);               % to input
-    StitchIt.SetSaveIterationStep;
-%--
-    mkdir([DataObj.DataPath,DataObj.DataName,'\']);
-    StitchIt.SetSaveIterationPath([DataObj.DataPath,DataObj.DataName,'\']);
-    RxChannels = DataObj.RxChannels;
-    StitchIt.Initialize(RECON.AcqInfo{RECON.ReconNumber},RxChannels); 
-    DisplayStatusCompass('Iterate Image: Generate',3);
+    DisplayStatusCompass('Super Recon: Generate',3);
     tic
-    Image = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr,Image0);
+    if strcmp(RECON.DoOffResCor,'Yes')
+        Image = StitchIt.CreateImage(Data,RxProfs,OffResMapInt,OffResTimeArr);
+    else
+        Image = StitchIt.CreateImage(Data,RxProfs);
+    end
     toc
-    AbsMaxEig = abs(StitchIt.MaxEig);
+    beep
+    clear StichIt
     
     %% Return
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'BaseMatrix',RECON.BaseMatrix,'Output'};
-    Panel(3,:) = {'LevelsPerDim',RECON.LevelsPerDim,'Output'};
-    Panel(4,:) = {'NumIterations',RECON.NumIterations,'Output'};
-    Panel(5,:) = {'Lambda',RECON.Lambda,'Output'};
-    Panel(6,:) = {'PreScaleRxChans',RECON.PreScaleRxChans,'Output'};
-    Panel(7,:) = {'AbsMaxEig',AbsMaxEig,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
-    NameSuffix = 'WaveletOffRes';
+    
+    if strcmp(RECON.DoOffResCor,'Yes')
+        NameSuffix = 'SuperRegridOffResCor';
+    else
+        NameSuffix = 'SuperRegrid';
+    end
     IMG = AddCompassInfo(Image,DataObj,RECON.AcqInfo{RECON.ReconNumber},StitchIt,PanelOutput,NameSuffix);
-    clear StitchIt
     
 end
 
