@@ -3,7 +3,7 @@
 %   
 %==================================================================
 
-classdef ReconNufftBasicV1a < handle
+classdef ReconStitchItWaveletNoOffResV1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,7 +14,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconNufftBasicV1a()              
+function obj = ReconStitchItWaveletNoOffResV1a()              
 end
 
 %==================================================================
@@ -22,13 +22,17 @@ end
 %==================================================================  
 function [IMG,err] = CreateImage(obj,DATA)     
     [Image,err] = obj.Recon.CreateImage(DATA);
-    
+       
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
-    Panel(3,:) = {'OffResCorrection','No','Output'};
+    Panel(3,:) = {'NumIterations',obj.Recon.NumIterations,'Output'};
+    Panel(4,:) = {'Lambda',obj.Recon.Lambda,'Output'};
+    Panel(5,:) = {'LevelsPerDim',obj.Recon.LevelsPerDim,'Output'};
+    Panel(6,:) = {'MaxEig',obj.Recon.MaxEig,'Output'};
+    Panel(7,:) = {'OffResCorrection','No','Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'NufftBasic';
+    NameSuffix = 'StitchIt';
     IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
 end
 
@@ -36,12 +40,32 @@ end
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = ReconNufftV1a();   
+    obj.Recon = ReconStitchItWaveletV1a();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
     obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
     obj.Recon.SetOffResCorrection(0);
+    LevelsPerDim0 = Reconipt.('LevelsPerDim');
+    for n = 1:3
+        LevelsPerDim(n) = str2double(LevelsPerDim0(n));
+    end
+    obj.Recon.SetLevelsPerDim(LevelsPerDim);
+    obj.Recon.SetLambda(str2double(Reconipt.('Lambda')));
+    obj.Recon.SetNumIterations(str2double(Reconipt.('NumIterations'))); 
+    if not(isempty(Reconipt.('MaxEig')))
+        obj.Recon.SetMaxEig(str2double(Reconipt.('MaxEig')));
+    end
     if strcmp(Reconipt.('DisplayRxProfs'),'Yes')
         obj.Recon.SetDisplayRxProfs(1);
+    end 
+    if strcmp(Reconipt.('DisplayInitialImages'),'Yes')
+        obj.Recon.SetDisplayInitialImages(1);
+    end 
+    if strcmp(Reconipt.('DisplayIterations'),'Yes')
+        obj.Recon.SetDisplayIterations(1);
+    end 
+    obj.Recon.SetDisplayIterationStep(str2double(Reconipt.('DisplayIterationStep')));
+    if strcmp(Reconipt.('SaveIterationStep'),'Yes')
+        obj.Recon.SetSaveIterationStep(1);
     end 
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
@@ -92,8 +116,43 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.labelstr = 'ReconNumber';
     Interface{m,1}.entrystr = '1';
     m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'LevelsPerDim';
+    Interface{m,1}.entrystr = '222';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'Lambda';
+    Interface{m,1}.entrystr = '20';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'NumIterations';
+    Interface{m,1}.entrystr = '5';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'MaxEig';
+    Interface{m,1}.entrystr = '';
+    m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'DisplayRxProfs';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DisplayInitialImages';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DisplayIterations';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'DisplayIterationStep';
+    Interface{m,1}.entrystr = '';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'SaveIterationStep';
     Interface{m,1}.entrystr = 'No';
     Interface{m,1}.options = {'Yes','No'};
 end 
