@@ -3,7 +3,7 @@
 %   
 %==================================================================
 
-classdef ReconNufftExtOffResV1a < handle
+classdef ReconCreateOffResMapV1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,42 +14,36 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconNufftExtOffResV1a()              
+function obj = ReconCreateOffResMapV1a()              
 end
 
 %==================================================================
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(obj,DATA)     
-    [Image,err] = obj.Recon.CreateImage(DATA);
+    [OffResMap,err] = obj.Recon.CreateOffResMap(DATA);
     
     Panel(1,:) = {'','','Output'};
-    Panel(2,:) = {'BaseMatrix',obj.Recon.BaseMatrix,'Output'};
-    if obj.Recon.OffResCorrection == 0
-        Panel(3,:) = {'OffResCorrection','No','Output'};
-    else 
-        Panel(3,:) = {'OffResCorrection','Yes','Output'};
-    end
+    Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'NufftOffResCor';
-    IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
+    NameSuffix = 'OffResMap';
+    IMG = AddCompassMapInfo(OffResMap,DATA{1}.DataObj,obj.Recon.AcqInfoOffRes{1},obj,PanelOutput,NameSuffix);
 end
 
 %=================================================================
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = ReconNufftV1a();   
+    obj.Recon = ReconOffResMapV1a();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
-    obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
-    if strcmp(Reconipt.('OffResCorrection'),'Yes')
-        obj.Recon.SetOffResCorrection(1);
-    else
-        obj.Recon.SetOffResCorrection(0);
-    end
-    if strcmp(Reconipt.('DisplayRxProfs'),'Yes')
-        obj.Recon.SetDisplayRxProfs(1);
+    obj.Recon.SetRelMaskVal(str2double(Reconipt.('RelMaskVal')));
+    obj.Recon.SetKernRad(str2double(Reconipt.('KernRad')));
+    if strcmp(Reconipt.('DisplayCombImages'),'Yes')
+        obj.Recon.SetDisplayCombinedImages(1);
+    end 
+    if strcmp(Reconipt.('DisplaySensitivityMaps'),'Yes')
+        obj.Recon.SetDisplaySensitivityMaps(1);
     end 
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
@@ -71,10 +65,7 @@ function InitViaCompass(obj,Reconipt)
             return
         end
     end
-    obj.Recon.SetAcqInfo(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH);
-    obj.Recon.SetAcqInfoRxp(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP);
-    obj.Recon.SetOffResMap(single(Reconipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.Im));
-    obj.Recon.SetShift(single(Reconipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.FovShift));
+    obj.Recon.SetAcqInfoOffRes(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHOR); 
 end
 
 %==================================================================
@@ -92,15 +83,6 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.runfunc2 = 'LoadReconDisp';
     Interface{m,1}.(Interface{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
     m = m+1;
-    Interface{m,1}.entrytype = 'RunExtFunc';
-    Interface{m,1}.labelstr = 'OffResMap_File';
-    Interface{m,1}.entrystr = '';
-    Interface{m,1}.buttonname = 'Load';
-    Interface{m,1}.runfunc1 = 'LoadImageCur';
-    Interface{m,1}.(Interface{m,1}.runfunc1).curloc = SCRPTPATHS.outloc;
-    Interface{m,1}.runfunc2 = 'LoadImageDisp';
-    Interface{m,1}.(Interface{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
-    m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'BaseMatrix';
     Interface{m,1}.entrystr = 140;
@@ -108,16 +90,20 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.options = mat2cell(mat,length(mat));
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'ReconNumber';
-    Interface{m,1}.entrystr = '1';
+    Interface{m,1}.labelstr = 'RelMaskVal';
+    Interface{m,1}.entrystr = '0.05';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'KernRad';
+    Interface{m,1}.entrystr = '5';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'OffResCorrection';
-    Interface{m,1}.entrystr = 'Yes';
-    Interface{m,1}.options = {'No','Yes'};
+    Interface{m,1}.labelstr = 'DisplayCombImages';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'DisplayRxProfs';
+    Interface{m,1}.labelstr = 'DisplaySensitivityMaps';
     Interface{m,1}.entrystr = 'No';
     Interface{m,1}.options = {'Yes','No'};
 end 

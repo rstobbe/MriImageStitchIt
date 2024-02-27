@@ -24,15 +24,15 @@ function [IMG,err] = CreateImage(obj,DATA)
     [Image,err] = obj.Recon.CreateImage(DATA);
        
     Panel(1,:) = {'','','Output'};
-    Panel(2,:) = {'BaseMatrix',obj.Recon.BaseMatrix,'Output'};
-    Panel(3,:) = {'LevelsPerDim',obj.Recon.LevelsPerDim,'Output'};
-    Panel(4,:) = {'NumIterations',obj.Recon.NumIterations,'Output'};
-    Panel(5,:) = {'Lambda',obj.Recon.Lambda,'Output'};
-    Panel(7,:) = {'AbsMaxEig',obj.Recon.AbsMaxEig,'Output'};
-    Panel(8,:) = {'OffResCorrection',obj.Recon.OffResCorrection,'Output'};
+    Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
+    Panel(3,:) = {'NumIterations',obj.Recon.NumIterations,'Output'};
+    Panel(4,:) = {'Lambda',obj.Recon.Lambda,'Output'};
+    Panel(5,:) = {'LevelsPerDim',obj.Recon.LevelsPerDim,'Output'};
+    Panel(6,:) = {'MaxEig',obj.Recon.MaxEig,'Output'};
+    Panel(7,:) = {'OffResCorrection','No','Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'StitchIt';
+    NameSuffix = 'StitchItOffResCor';
     IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
 end
 
@@ -71,9 +71,14 @@ function InitViaCompass(obj,Reconipt)
         obj.Recon.SetDisplayIterations(1);
     end 
     obj.Recon.SetDisplayIterationStep(str2double(Reconipt.('DisplayIterationStep')));
-    if strcmp(Reconipt.('SaveIterationStep'),'Yes')
+    if strcmp(Reconipt.('SaveEachDispIteration'),'Yes')
         obj.Recon.SetSaveIterationStep(1);
     end 
+    if strcmp(Reconipt.('DoMemRegister'),'Yes')
+        obj.Recon.SetDoMemRegister(1);
+    else
+        obj.Recon.SetDoMemRegister(0);
+    end
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -180,9 +185,14 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrystr = '';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'SaveIterationStep';
+    Interface{m,1}.labelstr = 'SaveEachDispIteration';
     Interface{m,1}.entrystr = 'No';
     Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DoMemRegister';
+    Interface{m,1}.entrystr = 'Yes';
+    Interface{m,1}.options = {'No','Yes'};
 end 
 
 end

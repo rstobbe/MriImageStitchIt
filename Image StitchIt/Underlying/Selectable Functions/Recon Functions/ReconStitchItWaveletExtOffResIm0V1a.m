@@ -3,7 +3,7 @@
 %   
 %==================================================================
 
-classdef ReconStitchItWaveletNoOffResV1a < handle
+classdef ReconStitchItWaveletExtOffResIm0V1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,7 +14,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconStitchItWaveletNoOffResV1a()              
+function obj = ReconStitchItWaveletExtOffResIm0V1a()              
 end
 
 %==================================================================
@@ -29,10 +29,10 @@ function [IMG,err] = CreateImage(obj,DATA)
     Panel(4,:) = {'Lambda',obj.Recon.Lambda,'Output'};
     Panel(5,:) = {'LevelsPerDim',obj.Recon.LevelsPerDim,'Output'};
     Panel(6,:) = {'MaxEig',obj.Recon.MaxEig,'Output'};
-    Panel(7,:) = {'OffResCorrection','No','Output'};
+    Panel(7,:) = {'OffResCorrection',obj.Recon.OffResCorrection,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'StitchIt';
+    NameSuffix = 'StitchItOffResCor';
     IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
 end
 
@@ -43,7 +43,11 @@ function InitViaCompass(obj,Reconipt)
     obj.Recon = ReconStitchItWaveletV1a();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
     obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
-    obj.Recon.SetOffResCorrection(0);
+    if strcmp(Reconipt.('OffResCorrection'),'Yes')
+        obj.Recon.SetOffResCorrection(1);
+    else
+        obj.Recon.SetOffResCorrection(0);
+    end
     LevelsPerDim0 = Reconipt.('LevelsPerDim');
     for n = 1:3
         LevelsPerDim(n) = str2double(LevelsPerDim0(n));
@@ -57,15 +61,16 @@ function InitViaCompass(obj,Reconipt)
     if strcmp(Reconipt.('DisplayRxProfs'),'Yes')
         obj.Recon.SetDisplayRxProfs(1);
     end 
+    if strcmp(Reconipt.('DisplayOffResMap'),'Yes')
+        obj.Recon.SetDisplayOffResMap(1);
+    end 
     if strcmp(Reconipt.('DisplayInitialImages'),'Yes')
         obj.Recon.SetDisplayInitialImages(1);
     end 
     if strcmp(Reconipt.('DisplayIterations'),'Yes')
         obj.Recon.SetDisplayIterations(1);
     end 
-    if not(isempty(Reconipt.('DisplayIterationStep')))
-        obj.Recon.SetDisplayIterationStep(str2double(Reconipt.('DisplayIterationStep')));
-    end
+    obj.Recon.SetDisplayIterationStep(str2double(Reconipt.('DisplayIterationStep')));
     if strcmp(Reconipt.('SaveEachDispIteration'),'Yes')
         obj.Recon.SetSaveIterationStep(1);
     end 
@@ -96,6 +101,9 @@ function InitViaCompass(obj,Reconipt)
     end
     obj.Recon.SetAcqInfo(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH);
     obj.Recon.SetAcqInfoRxp(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP);
+    obj.Recon.SetOffResMap(single(Reconipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.Im));
+    obj.Recon.SetImage0(single(Reconipt.([CallingLabel,'_Data']).('Image0_File_Data').IMG.Im));
+    obj.Recon.SetShift(single(Reconipt.([CallingLabel,'_Data']).('OffResMap_File_Data').IMG.FovShift));
 end
 
 %==================================================================
@@ -113,6 +121,24 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.runfunc2 = 'LoadReconDisp';
     Interface{m,1}.(Interface{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
     m = m+1;
+    Interface{m,1}.entrytype = 'RunExtFunc';
+    Interface{m,1}.labelstr = 'OffResMap_File';
+    Interface{m,1}.entrystr = '';
+    Interface{m,1}.buttonname = 'Load';
+    Interface{m,1}.runfunc1 = 'LoadImageCur';
+    Interface{m,1}.(Interface{m,1}.runfunc1).curloc = SCRPTPATHS.outloc;
+    Interface{m,1}.runfunc2 = 'LoadImageDisp';
+    Interface{m,1}.(Interface{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
+    m = m+1;
+    Interface{m,1}.entrytype = 'RunExtFunc';
+    Interface{m,1}.labelstr = 'Image0_File';
+    Interface{m,1}.entrystr = '';
+    Interface{m,1}.buttonname = 'Load';
+    Interface{m,1}.runfunc1 = 'LoadImageCur';
+    Interface{m,1}.(Interface{m,1}.runfunc1).curloc = SCRPTPATHS.outloc;
+    Interface{m,1}.runfunc2 = 'LoadImageDisp';
+    Interface{m,1}.(Interface{m,1}.runfunc2).defloc = COMPASSINFO.USERGBL.trajreconloc;
+    m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'BaseMatrix';
     Interface{m,1}.entrystr = 140;
@@ -122,6 +148,11 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrytype = 'Input';
     Interface{m,1}.labelstr = 'ReconNumber';
     Interface{m,1}.entrystr = '1';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'OffResCorrection';
+    Interface{m,1}.entrystr = 'Yes';
+    Interface{m,1}.options = {'No','Yes'};
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
     Interface{m,1}.labelstr = 'LevelsPerDim';
@@ -145,6 +176,11 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.options = {'Yes','No'};
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DisplayOffResMap';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'DisplayInitialImages';
     Interface{m,1}.entrystr = 'No';
     Interface{m,1}.options = {'Yes','No'};
@@ -156,7 +192,7 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
     Interface{m,1}.labelstr = 'DisplayIterationStep';
-    Interface{m,1}.entrystr = '1';
+    Interface{m,1}.entrystr = '';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'SaveEachDispIteration';

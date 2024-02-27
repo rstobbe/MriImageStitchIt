@@ -1,9 +1,9 @@
 %==================================================================
-% (V1a)
+% (V2a)
 %   
 %==================================================================
 
-classdef ReconStitchItWaveletNoOffResV1a < handle
+classdef ReconCreateOffResMapV2a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,66 +14,36 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconStitchItWaveletNoOffResV1a()              
+function obj = ReconCreateOffResMapV2a()              
 end
 
 %==================================================================
 % CreateImage
 %==================================================================  
 function [IMG,err] = CreateImage(obj,DATA)     
-    [Image,err] = obj.Recon.CreateImage(DATA);
-       
+    [OffResMap,err] = obj.Recon.CreateOffResMap(DATA);
+    
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
-    Panel(3,:) = {'NumIterations',obj.Recon.NumIterations,'Output'};
-    Panel(4,:) = {'Lambda',obj.Recon.Lambda,'Output'};
-    Panel(5,:) = {'LevelsPerDim',obj.Recon.LevelsPerDim,'Output'};
-    Panel(6,:) = {'MaxEig',obj.Recon.MaxEig,'Output'};
-    Panel(7,:) = {'OffResCorrection','No','Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'StitchIt';
-    IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
+    NameSuffix = 'OffResMap';
+    IMG = AddCompassMapInfo(OffResMap,DATA{1}.DataObj,obj.Recon.AcqInfoOffRes{1},obj,PanelOutput,NameSuffix);
 end
 
 %=================================================================
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = ReconStitchItWaveletV1a();   
+    obj.Recon = ReconOffResMapV2a();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
-    obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
-    obj.Recon.SetOffResCorrection(0);
-    LevelsPerDim0 = Reconipt.('LevelsPerDim');
-    for n = 1:3
-        LevelsPerDim(n) = str2double(LevelsPerDim0(n));
-    end
-    obj.Recon.SetLevelsPerDim(LevelsPerDim);
-    obj.Recon.SetLambda(str2double(Reconipt.('Lambda')));
-    obj.Recon.SetNumIterations(str2double(Reconipt.('NumIterations'))); 
-    if not(isempty(Reconipt.('MaxEig')))
-        obj.Recon.SetMaxEig(str2double(Reconipt.('MaxEig')));
-    end
+    obj.Recon.SetRelMaskVal(str2double(Reconipt.('RelMaskVal')));
     if strcmp(Reconipt.('DisplayRxProfs'),'Yes')
         obj.Recon.SetDisplayRxProfs(1);
     end 
     if strcmp(Reconipt.('DisplayInitialImages'),'Yes')
         obj.Recon.SetDisplayInitialImages(1);
     end 
-    if strcmp(Reconipt.('DisplayIterations'),'Yes')
-        obj.Recon.SetDisplayIterations(1);
-    end 
-    if not(isempty(Reconipt.('DisplayIterationStep')))
-        obj.Recon.SetDisplayIterationStep(str2double(Reconipt.('DisplayIterationStep')));
-    end
-    if strcmp(Reconipt.('SaveEachDispIteration'),'Yes')
-        obj.Recon.SetSaveIterationStep(1);
-    end 
-    if strcmp(Reconipt.('DoMemRegister'),'Yes')
-        obj.Recon.SetDoMemRegister(1);
-    else
-        obj.Recon.SetDoMemRegister(0);
-    end
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -94,7 +64,7 @@ function InitViaCompass(obj,Reconipt)
             return
         end
     end
-    obj.Recon.SetAcqInfo(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH);
+    obj.Recon.SetAcqInfoOffRes(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHOR);
     obj.Recon.SetAcqInfoRxp(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP);
 end
 
@@ -120,24 +90,8 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.options = mat2cell(mat,length(mat));
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'ReconNumber';
-    Interface{m,1}.entrystr = '1';
-    m = m+1;
-    Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'LevelsPerDim';
-    Interface{m,1}.entrystr = '222';
-    m = m+1;
-    Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'Lambda';
-    Interface{m,1}.entrystr = '20';
-    m = m+1;
-    Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'NumIterations';
-    Interface{m,1}.entrystr = '5';
-    m = m+1;
-    Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'MaxEig';
-    Interface{m,1}.entrystr = '';
+    Interface{m,1}.labelstr = 'RelMaskVal';
+    Interface{m,1}.entrystr = '0.05';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'DisplayRxProfs';
@@ -148,25 +102,6 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.labelstr = 'DisplayInitialImages';
     Interface{m,1}.entrystr = 'No';
     Interface{m,1}.options = {'Yes','No'};
-    m = m+1;
-    Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'DisplayIterations';
-    Interface{m,1}.entrystr = 'No';
-    Interface{m,1}.options = {'Yes','No'};
-    m = m+1;
-    Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'DisplayIterationStep';
-    Interface{m,1}.entrystr = '1';
-    m = m+1;
-    Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'SaveEachDispIteration';
-    Interface{m,1}.entrystr = 'No';
-    Interface{m,1}.options = {'Yes','No'};
-    m = m+1;
-    Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'DoMemRegister';
-    Interface{m,1}.entrystr = 'Yes';
-    Interface{m,1}.options = {'No','Yes'};
 end 
 
 end

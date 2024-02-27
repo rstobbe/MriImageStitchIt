@@ -3,7 +3,7 @@
 %   
 %==================================================================
 
-classdef ReconStitchItWaveletNoOffResV1a < handle
+classdef ReconLungStitchItWaveletNoOffResV1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,7 +14,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconStitchItWaveletNoOffResV1a()              
+function obj = ReconLungStitchItWaveletNoOffResV1a()              
 end
 
 %==================================================================
@@ -40,10 +40,9 @@ end
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = ReconStitchItWaveletV1a();   
+    obj.Recon = ReconLungStitchItWaveletV1a();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
     obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
-    obj.Recon.SetOffResCorrection(0);
     LevelsPerDim0 = Reconipt.('LevelsPerDim');
     for n = 1:3
         LevelsPerDim(n) = str2double(LevelsPerDim0(n));
