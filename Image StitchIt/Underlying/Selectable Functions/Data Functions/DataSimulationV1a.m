@@ -3,7 +3,7 @@
 %   
 %==================================================================
 
-classdef DataSiemensV1a < handle
+classdef DataSimulationV1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,7 +14,7 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = DataSiemensV1a()              
+function obj = DataSimulationV1a()              
 end
 
 %=================================================================
@@ -41,7 +41,7 @@ function [SCRPTipt,SCRPTGBL,DATA,err] = InitViaCompass(obj,SCRPTipt,SCRPTGBL,DAT
                 saveData.path = file(1:ind(end));
                 SCRPTGBL.RWSUI.funclabel = PanelLabel;
                 SCRPTGBL.RWSUI.callingfuncs{1} = 'StitchDatafunc';
-                [SCRPTipt,SCRPTGBL,err] = SelectSiemensDataExpStitchIt(SCRPTipt,SCRPTGBL,saveData);
+                [SCRPTipt,SCRPTGBL,err] = SelectSimulationDataExpStitchIt(SCRPTipt,SCRPTGBL,saveData);
                 if err.flag
                     ErrDisp(err);
                     return
@@ -70,10 +70,10 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.labelstr = 'Data_File';
     Interface{m,1}.entrystr = '';
     Interface{m,1}.buttonname = 'Select';
-    Interface{m,1}.runfunc1 = 'SelectSiemensDataCurStitchIt';
+    Interface{m,1}.runfunc1 = 'SelectSimulationDataCurStitchIt';
     Interface{m,1}.(Interface{m,1}.runfunc1).curloc = SCRPTPATHS.experimentsloc;
     Interface{m,1}.(Interface{m,1}.runfunc1).defloc = COMPASSINFO.USERGBL.tempdataloc;
-    Interface{m,1}.runfunc2 = 'LoadSiemensDataDisp';
+    Interface{m,1}.runfunc2 = 'LoadSimulationDataDisp';
     Interface{m,1}.searchpath = SCRPTPATHS.scrptshareloc;
     Interface{m,1}.path = SCRPTPATHS.scrptshareloc;
 end 
