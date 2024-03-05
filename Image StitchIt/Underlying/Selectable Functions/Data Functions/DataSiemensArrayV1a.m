@@ -45,7 +45,7 @@ function [SCRPTipt,SCRPTGBL,DATA,err] = InitViaCompass(obj,SCRPTipt,SCRPTGBL,DAT
                     saveData.path = file(1:ind(end));
                     SCRPTGBL.RWSUI.funclabel = PanelLabel{n};
                     SCRPTGBL.RWSUI.callingfuncs{1} = 'StitchDatafunc';
-                    [SCRPTipt,SCRPTGBL,err] = SelectSiemensDataExpStitch(SCRPTipt,SCRPTGBL,saveData);
+                    [SCRPTipt,SCRPTGBL,err] = SelectSiemensDataExpStitchIt(SCRPTipt,SCRPTGBL,saveData);
                     if err.flag
                         ErrDisp(err);
                         return
