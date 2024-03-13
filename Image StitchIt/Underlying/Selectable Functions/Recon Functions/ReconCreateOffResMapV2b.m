@@ -1,9 +1,9 @@
 %==================================================================
-% (V1b)
-%   - include RespPhase selection
+% (V2b)
+%   NegFreqMask
 %==================================================================
 
-classdef ReconPsfV1a < handle
+classdef ReconCreateOffResMapV2b < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,35 +14,37 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconPsfV1a()              
+function obj = ReconCreateOffResMapV2b()              
 end
 
 %==================================================================
 % CreateImage
 %==================================================================  
-function [IMG,err] = CreateImage(obj)     
-    [Image,err] = obj.Recon.CreateImage();
+function [IMG,err] = CreateImage(obj,DATA)     
+    [OffResMap,err] = obj.Recon.CreateOffResMap(DATA);
     
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    DataObj.DataPath = [];
-    DataObj.DataName = [];
-    DataObj.DataInfo.ExpPars = [];
-    DataObj.DataInfo.PanelOutput = [];
-    ReconNumber = 1;
-    NameSuffix = [];
-    IMG = AddCompassInfo(Image,DataObj,obj.Recon.AcqInfo{ReconNumber},obj,PanelOutput,NameSuffix);         
+    NameSuffix = 'OffResMap';
+    IMG = AddCompassMapInfo(OffResMap,DATA{1}.DataObj,obj.Recon.AcqInfoOffRes{1},obj,PanelOutput,NameSuffix);
 end
 
 %=================================================================
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = CreatePsfV1a();   
+    obj.Recon = ReconOffResMapV2b();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
-    %obj.Recon.SetReconNumber(1);        % No dual-echo 
+    obj.Recon.SetRelMaskVal(str2double(Reconipt.('RelMaskVal')));
+    obj.Recon.SetNegFreqMask(str2double(Reconipt.('NegFreqMaskVal')));
+    if strcmp(Reconipt.('DisplayRxProfs'),'Yes')
+        obj.Recon.SetDisplayRxProfs(1);
+    end 
+    if strcmp(Reconipt.('DisplayInitialImages'),'Yes')
+        obj.Recon.SetDisplayInitialImages(1);
+    end 
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -63,7 +65,8 @@ function InitViaCompass(obj,Reconipt)
             return
         end
     end
-    obj.Recon.SetAcqInfo(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH);
+    obj.Recon.SetAcqInfoOffRes(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHOR);
+    obj.Recon.SetAcqInfoRxp(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP);
 end
 
 %==================================================================
@@ -86,6 +89,24 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrystr = 140;
     mat = (10:10:500).';
     Interface{m,1}.options = mat2cell(mat,length(mat));
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'RelMaskVal';
+    Interface{m,1}.entrystr = '0.05';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Input';
+    Interface{m,1}.labelstr = 'NegFreqMaskVal (Hz)';
+    Interface{m,1}.entrystr = '-150';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DisplayRxProfs';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'DisplayInitialImages';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
 end 
 
 end

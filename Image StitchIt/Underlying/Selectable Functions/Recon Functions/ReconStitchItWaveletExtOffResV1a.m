@@ -22,7 +22,10 @@ end
 %==================================================================  
 function [IMG,err] = CreateImage(obj,DATA)     
     [Image,err] = obj.Recon.CreateImage(DATA);
-       
+    if err.flag
+        IMG = [];
+        return
+    end
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
     Panel(3,:) = {'NumIterations',obj.Recon.NumIterations,'Output'};
@@ -74,11 +77,12 @@ function InitViaCompass(obj,Reconipt)
     if strcmp(Reconipt.('SaveEachDispIteration'),'Yes')
         obj.Recon.SetSaveIterationStep(1);
     end 
-    if strcmp(Reconipt.('DoMemRegister'),'Yes')
-        obj.Recon.SetDoMemRegister(1);
-    else
-        obj.Recon.SetDoMemRegister(0);
-    end
+    if strcmp(Reconipt.('LowRamCase'),'Yes')
+        obj.Recon.SetLowRamCase(1);
+    end 
+    if strcmp(Reconipt.('LowGpuRamCase'),'Yes')
+        obj.Recon.SetLowGpuRamCase(1);
+    end 
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -190,9 +194,14 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.options = {'Yes','No'};
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
-    Interface{m,1}.labelstr = 'DoMemRegister';
-    Interface{m,1}.entrystr = 'Yes';
-    Interface{m,1}.options = {'No','Yes'};
+    Interface{m,1}.labelstr = 'LowRamCase';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'LowGpuRamCase';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'};
 end 
 
 end
