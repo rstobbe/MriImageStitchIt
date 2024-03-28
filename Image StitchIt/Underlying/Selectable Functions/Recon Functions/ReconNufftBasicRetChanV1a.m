@@ -28,7 +28,7 @@ function [IMG,err] = CreateImage(obj,DATA)
     Panel(3,:) = {'OffResCorrection','No','Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'NufftBasic';
+    NameSuffix = 'NufftBasicRetChan';
     IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
 end
 
@@ -40,6 +40,9 @@ function InitViaCompass(obj,Reconipt)
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
     obj.Recon.SetReconNumber(str2double(Reconipt.('ReconNumber')));
     obj.Recon.SetOffResCorrection(0);
+    if strcmp(Reconipt.('LowGpuRamCase'),'Yes')
+        obj.Recon.SetLowGpuRamCase(1);
+    end 
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -61,7 +64,6 @@ function InitViaCompass(obj,Reconipt)
         end
     end
     obj.Recon.SetAcqInfo(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCH);
-    obj.Recon.SetAcqInfoRxp(Reconipt.([CallingLabel,'_Data']).('Recon_File_Data').WRT.STCHRXP);
 end
 
 %==================================================================
@@ -82,12 +84,17 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'BaseMatrix';
     Interface{m,1}.entrystr = 140;
-    mat = (10:10:500).';
+    mat = (10:10:700).';
     Interface{m,1}.options = mat2cell(mat,length(mat));
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
     Interface{m,1}.labelstr = 'ReconNumber';
     Interface{m,1}.entrystr = '1';
+    m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'LowGpuRamCase';
+    Interface{m,1}.entrystr = 'No';
+    Interface{m,1}.options = {'Yes','No'}; 
 end 
 
 end
