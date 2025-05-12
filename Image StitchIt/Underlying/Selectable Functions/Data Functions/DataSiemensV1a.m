@@ -20,12 +20,19 @@ end
 %=================================================================
 % InitViaCompass
 %==================================================================  
-function [SCRPTipt,SCRPTGBL,DATA,err] = InitViaCompass(obj,SCRPTipt,SCRPTGBL,DATAipt) 
+function [SCRPTipt,SCRPTGBL,DATA,err] = InitViaCompass(obj,SCRPTipt,SCRPTGBL,DATAipt)    
     
     err.flag = 0;
     DATA.method = DATAipt.Func;
     PanelLabel = 'Data_File';
     CallingLabel = DATAipt.Struct.labelstr;
+    if isfield(SCRPTGBL.RWSUI,'ExtRunInfo')
+        Path = SCRPTGBL.RWSUI.ExtRunInfo.saveData.path;
+        File = '';
+        LoadType = '.dat';
+        [SCRPTipt,SCRPTGBL,err] = File2Panel(SCRPTipt,SCRPTGBL,CallingLabel,PanelLabel,LoadType,Path,File);
+        DATAipt.([CallingLabel,'_Data']).([PanelLabel,'_Data']) = SCRPTGBL.RWSUI.ExtRunInfo.saveData;
+    end
     if not(isfield(DATAipt,[CallingLabel,'_Data']))
         if isfield(DATAipt.(PanelLabel).Struct,'selectedfile')
             file = DATAipt.(PanelLabel).Struct.selectedfile;
@@ -40,7 +47,7 @@ function [SCRPTipt,SCRPTGBL,DATA,err] = InitViaCompass(obj,SCRPTipt,SCRPTGBL,DAT
                 saveData.file = file(ind(end)+1:end);
                 saveData.path = file(1:ind(end));
                 SCRPTGBL.RWSUI.funclabel = PanelLabel;
-                SCRPTGBL.RWSUI.callingfuncs{1} = 'StitchDatafunc';
+                SCRPTGBL.RWSUI.callingfuncs{1} = CallingLabel;
                 [SCRPTipt,SCRPTGBL,err] = SelectSiemensDataExpStitchIt(SCRPTipt,SCRPTGBL,saveData);
                 if err.flag
                     ErrDisp(err);

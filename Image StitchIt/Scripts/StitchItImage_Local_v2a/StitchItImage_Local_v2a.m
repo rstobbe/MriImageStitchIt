@@ -94,7 +94,8 @@ if isfield(RWSUI,'ExtRunInfo')
         SCRPTGBL.RWSUI.SaveScript = 'no';
         SCRPTGBL.RWSUI.SaveGlobal = 'yes';
     end
-    name = ['IMG_',RWSUI.ExtRunInfo.name];
+    % name = ['IMG_',RWSUI.ExtRunInfo.name];
+    name = IMG.name;
 else
     SCRPTGBL.RWSUI.SaveScriptOption = 'yes';
     SCRPTGBL.RWSUI.SaveGlobal = 'yes';
