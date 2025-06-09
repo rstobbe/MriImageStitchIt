@@ -1,9 +1,9 @@
 %==================================================================
-% (V2c)
+% (3b)
 %   - 
 %==================================================================
 
-classdef CpsTrajMashLung3a < handle
+classdef CpsTrajMashLungMultiPhase3b < handle
 
 properties (SetAccess = private)                   
     TrajMashObj
@@ -14,18 +14,19 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = CpsTrajMashLung3a()              
+function obj = CpsTrajMashLungMultiPhase3b()              
 end
 
 %=================================================================
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Ipt)    
-    obj.TrajMashObj = TrajMashLung3a();   
+    obj.TrajMashObj = TrajMashLungMultiPhase3b();   
     obj.TrajMashObj.SetStartSkip(str2double(Ipt.('StartSkip')));
     obj.TrajMashObj.SetDispFigs(str2double(Ipt.('DispFigs')));
     obj.TrajMashObj.SetPeakFindSensitivity(str2double(Ipt.('PeakFindSensitivity')));
-    obj.TrajMashObj.SetAtExpirationFrac(str2double(Ipt.('AtExpirationFrac')));
+    obj.TrajMashObj.SetPhases(str2double(Ipt.('NumPhases')));
+    obj.TrajMashObj.SetAcceptanceLevel(str2double(Ipt.('AcceptanceLevel')));
     obj.TrajMashObj.SetFlip(str2double(Ipt.('FlipNavigator')));
 end
 
@@ -36,13 +37,12 @@ function Panel = ReturnInfoCompass(obj)
     Panel(1,:) = {'TrajMashObj',obj.TrajMashObj.Method,'Output'};
     Panel(2,:) = {'StartSkip',obj.TrajMashObj.StartSkip,'Output'};
     Panel(3,:) = {'FilterTime',obj.TrajMashObj.FilterTime,'Output'};
-    Panel(4,:) = {'AtExpirationFrac',obj.TrajMashObj.AtExpirationFrac,'Output'};
-    Panel(5,:) = {'AtExpirationPerFrac',obj.TrajMashObj.AtExpirationPeriFrac,'Output'};
-    Panel(6,:) = {'PeakFindSensitivity',obj.TrajMashObj.PeakFindSensitivity,'Output'};   
-    Panel(7,:) = {'MeanAvesUsedPerTraj',obj.TrajMashObj.MeanTrajsUsed,'Output'};
-    Panel(8,:) = {'PeriValsFraction',obj.TrajMashObj.PeriValsFraction,'Output'};
-    Panel(9,:) = {'HoleFraction',obj.TrajMashObj.HoleFraction,'Output'};
-    Panel(10,:) = {'CoilUsed',obj.TrajMashObj.UseCoil,'Output'};
+    Panel(4,:) = {'PeakFindSensitivity',obj.TrajMashObj.PeakFindSensitivity,'Output'};   
+    Panel(5,:) = {'AcceptanceLevel',obj.TrajMashObj.AcceptanceLevel,'Output'};
+    Panel(6,:) = {'MeanAvesUsedPerTraj',obj.TrajMashObj.MeanTrajsUsed,'Output'};
+    Panel(7,:) = {'PeriValsFraction',obj.TrajMashObj.PeriValsFraction,'Output'};
+    Panel(8,:) = {'HoleFraction',obj.TrajMashObj.HoleFraction,'Output'};
+    Panel(9,:) = {'FlipNavigator',obj.TrajMashObj.Flip,'Output'};
 end
 
 %==================================================================
@@ -56,7 +56,7 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'DispFigs';
-    Interface{m,1}.entrystr = '0';
+    Interface{m,1}.entrystr = '1';
     Interface{m,1}.options = {'0','1','2'};
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
@@ -64,13 +64,18 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrystr = '3';
     Interface{m,1}.options = {'1','2','3','4','5','6','7','8'};
     m = m+1;
+    Interface{m,1}.entrytype = 'Choose';
+    Interface{m,1}.labelstr = 'AcceptanceLevel';
+    Interface{m,1}.entrystr = '1';
+    Interface{m,1}.options = {'1','2','3'};
+    m = m+1;
     Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'AtExpirationFrac';
-    Interface{m,1}.entrystr = '0.25';
+    Interface{m,1}.labelstr = 'NumPhases';
+    Interface{m,1}.entrystr = '10';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'FlipNavigator';
-    Interface{m,1}.entrystr = '0';
+    Interface{m,1}.entrystr = '1';
     Interface{m,1}.options = {'0','1'};
 end 
 

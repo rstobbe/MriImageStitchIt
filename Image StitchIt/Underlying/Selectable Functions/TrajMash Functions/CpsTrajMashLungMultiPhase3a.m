@@ -1,9 +1,9 @@
 %==================================================================
-% (V2c)
+% (3a)
 %   - 
 %==================================================================
 
-classdef CpsTrajMashLung3a < handle
+classdef CpsTrajMashLungMultiPhase3a < handle
 
 properties (SetAccess = private)                   
     TrajMashObj
@@ -14,18 +14,18 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = CpsTrajMashLung3a()              
+function obj = CpsTrajMashLungMultiPhase3a()              
 end
 
 %=================================================================
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Ipt)    
-    obj.TrajMashObj = TrajMashLung3a();   
+    obj.TrajMashObj = TrajMashLungMultiPhase3a();   
     obj.TrajMashObj.SetStartSkip(str2double(Ipt.('StartSkip')));
     obj.TrajMashObj.SetDispFigs(str2double(Ipt.('DispFigs')));
     obj.TrajMashObj.SetPeakFindSensitivity(str2double(Ipt.('PeakFindSensitivity')));
-    obj.TrajMashObj.SetAtExpirationFrac(str2double(Ipt.('AtExpirationFrac')));
+    obj.TrajMashObj.SetPhases(str2double(Ipt.('NumPhases')));
     obj.TrajMashObj.SetFlip(str2double(Ipt.('FlipNavigator')));
 end
 
@@ -65,8 +65,8 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.options = {'1','2','3','4','5','6','7','8'};
     m = m+1;
     Interface{m,1}.entrytype = 'Input';
-    Interface{m,1}.labelstr = 'AtExpirationFrac';
-    Interface{m,1}.entrystr = '0.25';
+    Interface{m,1}.labelstr = 'NumPhases';
+    Interface{m,1}.entrystr = '20';
     m = m+1;
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'FlipNavigator';
