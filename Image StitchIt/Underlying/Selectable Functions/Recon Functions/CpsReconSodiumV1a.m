@@ -1,9 +1,9 @@
 %==================================================================
-% 
+% (V1a)
 %   
 %==================================================================
 
-classdef ReconPsfV1a < handle
+classdef CpsReconSodiumV1a < handle
 
 properties (SetAccess = private)                   
     Recon
@@ -14,20 +14,21 @@ methods
 %==================================================================
 % Constructor
 %==================================================================  
-function obj = ReconPsfV1a()              
+function obj = CpsReconSodiumV1a()              
 end
 
 %==================================================================
 % CreateImage
 %==================================================================  
-function [IMG,err] = CreateImage(obj)     
-    [Image,err] = obj.Recon.CreateImage();
+function [IMG,err] = CreateImage(obj,DATA)     
+    [Image,err] = obj.Recon.CreateImage(DATA);
     
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
+    Panel(3,:) = {'OffResCorrection','No','Output'};
     PanelOutput = cell2struct(Panel,{'label','value','type'},2);
     
-    NameSuffix = 'Psf';
+    NameSuffix = '';
     IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{obj.Recon.ReconNumber},obj,PanelOutput,NameSuffix);         
 end
 
@@ -35,9 +36,13 @@ end
 % InitViaCompass
 %==================================================================  
 function InitViaCompass(obj,Reconipt)    
-    obj.Recon = CreatePsfV1b();   
+    obj.Recon = ReconNufftRetChanV1b();   
     obj.Recon.SetBaseMatrix(str2double(Reconipt.('BaseMatrix')));
-    %obj.Recon.SetReconNumber(1);        % No dual-echo 
+    %-
+    obj.Recon.SetReconNumber(1);
+    obj.Recon.SetOffResCorrection(0);
+    obj.Recon.SetObjectAtIso(1);
+    %-
     CallingLabel = Reconipt.Struct.labelstr;
     if not(isfield(Reconipt,[CallingLabel,'_Data']))
         if isfield(Reconipt.('Recon_File').Struct,'selectedfile')
@@ -79,7 +84,7 @@ function [Interface] = CompassInterface(obj,SCRPTPATHS)
     Interface{m,1}.entrytype = 'Choose';
     Interface{m,1}.labelstr = 'BaseMatrix';
     Interface{m,1}.entrystr = 140;
-    mat = (10:10:500).';
+    mat = (10:10:700).';
     Interface{m,1}.options = mat2cell(mat,length(mat));
 end 
 
