@@ -36,8 +36,9 @@ function [IMG,err] = CreateImage(obj,DATA)
     
     NameSuffix = 'ReconYafiV2c';
     if obj.ReturnType == 0
-        DispWid = [0.5 1.5];
-        IMG = AddCompassMapInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{1},obj,PanelOutput,NameSuffix,DispWid);  
+        % DispWid = [0.5 1.5];
+        % IMG = AddCompassMapInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{1},obj,PanelOutput,NameSuffix,DispWid);  
+        IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{1},obj,PanelOutput,NameSuffix);  
     else
         IMG = AddCompassInfo(Image,DATA{1}.DataObj,obj.Recon.AcqInfo{1},obj,PanelOutput,NameSuffix);
     end
