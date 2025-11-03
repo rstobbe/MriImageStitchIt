@@ -25,8 +25,11 @@ end
 %==================================================================  
 function [IMG,err] = CreateImage(obj,DATA)     
     [Image,err] = obj.Recon.CreateImage(DATA);
+    if err.flag
+        IMG = [];
+        return
+    end
     %TrajMashPanel = obj.CpsTrajMashObj.ReturnInfoCompass();
-
     Panel(1,:) = {'','','Output'};
     Panel(2,:) = {'ReconObj',obj.Recon.Method,'Output'};
     Panel(3,:) = {'ReconMatrix',obj.Recon.BaseMatrix,'Output'};
